@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "API (ComprasProgramadas)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/ComprasProgramadas.API"],
+      "port": 5081
+    },
+    {
+      "name": "Infra (MySQL + Kafka via Docker)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "-d"],
+      "port": 3306
+    }
+  ]
+}

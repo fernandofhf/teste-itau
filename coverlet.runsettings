@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Exclude>
+            [ComprasProgramadas.Infrastructure]ComprasProgramadas.Infrastructure.Migrations*,
+            [ComprasProgramadas.Infrastructure]ComprasProgramadas.Infrastructure.Persistence.Context.AppDbContextFactory,
+            [ComprasProgramadas.Infrastructure]ComprasProgramadas.Infrastructure.Persistence.Context.AppDbContextModelSnapshot,
+            [ComprasProgramadas.Infrastructure]ComprasProgramadas.Infrastructure.DependencyInjection,
+            [ComprasProgramadas.Application]ComprasProgramadas.Application.DependencyInjection,
+            [ComprasProgramadas.API]*
+          </Exclude>
+          <ExcludeByFile>
+            **/Migrations/**,
+            **/obj/**
+          </ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
