@@ -4,6 +4,7 @@ using ComprasProgramadas.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ComprasProgramadas.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260304221243_NullableClienteIdMaster")]
+    partial class NullableClienteIdMaster
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -270,33 +273,6 @@ namespace ComprasProgramadas.Infrastructure.Migrations
                     b.ToTable("EventosIR");
                 });
 
-            modelBuilder.Entity("ComprasProgramadas.Domain.Entities.HistoricoAporte", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("ClienteId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("DataAlteracao")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<decimal>("ValorAnterior")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ValorNovo")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClienteId");
-
-                    b.ToTable("HistoricoAportes");
-                });
-
             modelBuilder.Entity("ComprasProgramadas.Domain.Entities.ItemCesta", b =>
                 {
                     b.Property<long>("Id")
@@ -435,17 +411,6 @@ namespace ComprasProgramadas.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("ComprasProgramadas.Domain.Entities.EventoIR", b =>
-                {
-                    b.HasOne("ComprasProgramadas.Domain.Entities.Cliente", "Cliente")
-                        .WithMany()
-                        .HasForeignKey("ClienteId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Cliente");
-                });
-
-            modelBuilder.Entity("ComprasProgramadas.Domain.Entities.HistoricoAporte", b =>
                 {
                     b.HasOne("ComprasProgramadas.Domain.Entities.Cliente", "Cliente")
                         .WithMany()

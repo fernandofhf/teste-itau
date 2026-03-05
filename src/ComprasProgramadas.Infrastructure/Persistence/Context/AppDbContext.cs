@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<EventoIR> EventosIR => Set<EventoIR>();
     public DbSet<Cotacao> Cotacoes => Set<Cotacao>();
     public DbSet<Rebalanceamento> Rebalanceamentos => Set<Rebalanceamento>();
+    public DbSet<HistoricoAporte> HistoricoAportes => Set<HistoricoAporte>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -36,7 +37,8 @@ public class AppDbContext : DbContext
             e.Property(c => c.Ativo).HasDefaultValue(true);
             e.HasOne(c => c.ContaGrafica)
                 .WithOne(cg => cg.Cliente)
-                .HasForeignKey<ContaGrafica>(cg => cg.ClienteId);
+                .HasForeignKey<ContaGrafica>(cg => cg.ClienteId)
+                .IsRequired(false);
         });
 
         // ContaGrafica
@@ -138,6 +140,19 @@ public class AppDbContext : DbContext
             e.Property(r => r.TickerVendido).HasMaxLength(10);
             e.Property(r => r.TickerComprado).HasMaxLength(10);
             e.Property(r => r.ValorVenda).HasColumnType("decimal(18,2)");
+        });
+
+        // HistoricoAporte
+        modelBuilder.Entity<HistoricoAporte>(e =>
+        {
+            e.HasKey(h => h.Id);
+            e.Property(h => h.Id).ValueGeneratedOnAdd();
+            e.Property(h => h.ValorAnterior).HasColumnType("decimal(18,2)");
+            e.Property(h => h.ValorNovo).HasColumnType("decimal(18,2)");
+            e.HasOne(h => h.Cliente)
+                .WithMany()
+                .HasForeignKey(h => h.ClienteId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

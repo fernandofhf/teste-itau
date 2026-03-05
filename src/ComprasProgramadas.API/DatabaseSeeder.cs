@@ -20,7 +20,7 @@ public static class DatabaseSeeder
             // Criar conta master se não existir
             if (!await context.ContasGraficas.AnyAsync(c => c.Tipo == TipoConta.Master))
             {
-                var master = new ContaGrafica(0, "MST-000001", TipoConta.Master);
+                var master = ContaGrafica.CriarMaster();
                 context.ContasGraficas.Add(master);
                 await context.SaveChangesAsync();
                 logger.LogInformation("Conta Master criada: {NumConta}", master.NumeroConta);

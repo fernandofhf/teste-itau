@@ -1,8 +1,14 @@
 using ComprasProgramadas.Application.Commands.Admin;
 using ComprasProgramadas.Application.DTOs;
 using ComprasProgramadas.Application.Queries.Admin;
+using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Domain.Entities;
+using ComprasProgramadas.Domain.Enums;
+using ComprasProgramadas.Domain.Interfaces;
+using ComprasProgramadas.Infrastructure.Persistence.Context;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ComprasProgramadas.API.Controllers;
 
@@ -12,8 +18,20 @@ namespace ComprasProgramadas.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly AppDbContext _context;
+    private readonly IWebHostEnvironment _env;
+    private readonly IRebalanceamentoService _rebalanceamentoService;
+    private readonly ICestaRecomendacaoRepository _cestaRepo;
 
-    public AdminController(IMediator mediator) => _mediator = mediator;
+    public AdminController(IMediator mediator, AppDbContext context, IWebHostEnvironment env,
+        IRebalanceamentoService rebalanceamentoService, ICestaRecomendacaoRepository cestaRepo)
+    {
+        _mediator = mediator;
+        _context = context;
+        _env = env;
+        _rebalanceamentoService = rebalanceamentoService;
+        _cestaRepo = cestaRepo;
+    }
 
     /// <summary>Cadastrar ou alterar a cesta Top Five (dispara rebalanceamento se existir cesta anterior)</summary>
     [HttpPost("cesta")]
@@ -41,6 +59,52 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> HistoricoCestas(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetHistoricoCestasQuery(), ct);
+        return Ok(result);
+    }
+
+    /// <summary>[DEV ONLY] Zera toda a base de dados e recria a conta master. Use apenas para testes.</summary>
+    [HttpDelete("reset-database")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ResetDatabase(CancellationToken ct)
+    {
+        if (!_env.IsDevelopment())
+            return Forbid();
+
+        // Deletar na ordem correta respeitando FKs
+        await _context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Distribuicoes;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE EventosIR;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Rebalanceamentos;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE OrdensCompra;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Custodias;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE ContasGraficas;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Clientes;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE ItensCesta;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE CestasRecomendacao;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Cotacoes;", ct);
+        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE HistoricoAportes;", ct);
+        await _context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1;", ct);
+
+        // Recriar conta master
+        var master = ContaGrafica.CriarMaster();
+        _context.ContasGraficas.Add(master);
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(new { mensagem = "Base zerada com sucesso. Conta Master recriada.", contaMasterId = master.Id });
+    }
+
+    /// <summary>[RN-050/051/052] Executar rebalanceamento por desvio de proporção (limiar padrão: 5pp)</summary>
+    [HttpPost("rebalanceamento/desvio")]
+    [ProducesResponseType(typeof(ExecutarRebalanceamentoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RebalanceamentoPorDesvio([FromQuery] decimal limiar = 5m, CancellationToken ct = default)
+    {
+        var cesta = await _cestaRepo.ObterAtivaAsync(ct);
+        if (cesta == null)
+            return NotFound(new { erro = "Nenhuma cesta ativa encontrada." });
+
+        var result = await _rebalanceamentoService.ExecutarRebalanceamentoPorDesvioAsync(cesta, limiar, ct);
         return Ok(result);
     }
 

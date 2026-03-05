@@ -88,7 +88,7 @@ public class ContaGraficaTests
 
         conta.Tipo.Should().Be(TipoConta.Master);
         conta.NumeroConta.Should().NotBeNullOrEmpty();
-        conta.ClienteId.Should().Be(0);
+        conta.ClienteId.Should().BeNull();
     }
 
     [Fact]

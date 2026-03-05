@@ -5,7 +5,7 @@ namespace ComprasProgramadas.Domain.Entities;
 public class ContaGrafica
 {
     public long Id { get; private set; }
-    public long ClienteId { get; private set; }
+    public long? ClienteId { get; private set; }
     public string NumeroConta { get; private set; } = string.Empty;
     public TipoConta Tipo { get; private set; }
     public DateTime DataCriacao { get; private set; }
@@ -15,7 +15,7 @@ public class ContaGrafica
 
     protected ContaGrafica() { }
 
-    public ContaGrafica(long clienteId, string numeroConta, TipoConta tipo)
+    public ContaGrafica(long? clienteId, string numeroConta, TipoConta tipo)
     {
         ClienteId = clienteId;
         NumeroConta = numeroConta;
@@ -25,10 +25,7 @@ public class ContaGrafica
 
     public static ContaGrafica CriarMaster()
     {
-        return new ContaGrafica(0, "MST-000001", TipoConta.Master)
-        {
-            ClienteId = 0
-        };
+        return new ContaGrafica(null, "MST-000001", TipoConta.Master);
     }
 
     public static string GerarNumeroFilhote(long clienteId)

@@ -113,7 +113,8 @@ public class AlterarValorMensalHandlerTests
             new AderirProdutoCommand("Carlos", "55544433322", "c@test.com", 500m),
             CancellationToken.None);
 
-        var handler = new AlterarValorMensalHandler(clienteRepo);
+        var historicoRepo = new HistoricoAporteRepository(context);
+        var handler = new AlterarValorMensalHandler(clienteRepo, historicoRepo);
         var result = await handler.Handle(
             new AlterarValorMensalCommand(adesao.ClienteId, 1200m),
             CancellationToken.None);
@@ -130,7 +131,8 @@ public class AlterarValorMensalHandlerTests
         using var context = TestDbContextFactory.Create();
         var clienteRepo = new ClienteRepository(context);
 
-        var handler = new AlterarValorMensalHandler(clienteRepo);
+        var historicoRepo = new HistoricoAporteRepository(context);
+        var handler = new AlterarValorMensalHandler(clienteRepo, historicoRepo);
 
         var act = async () => await handler.Handle(
             new AlterarValorMensalCommand(9999, 1000m),

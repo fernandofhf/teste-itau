@@ -7,6 +7,19 @@ using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Identificar a pasta cotacoes
+var rawCotacoesPath = builder.Configuration["CotacoesPath"] ?? "cotacoes";
+if (!Path.IsPathRooted(rawCotacoesPath))
+{
+    var dir = builder.Environment.ContentRootPath;
+    for (var i = 0; i < 6; i++)
+    {
+        var candidate = Path.Combine(dir, rawCotacoesPath);
+        if (Directory.Exists(candidate)) { builder.Configuration["CotacoesPath"] = candidate; break; }
+        dir = Path.GetDirectoryName(dir) ?? dir;
+    }
+}
+
 // Services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

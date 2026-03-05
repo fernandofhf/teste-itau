@@ -1,4 +1,5 @@
 using ComprasProgramadas.Application.DTOs;
+using ComprasProgramadas.Domain.Entities;
 using ComprasProgramadas.Domain.Interfaces;
 using FluentValidation;
 using MediatR;
@@ -18,8 +19,13 @@ public class AlterarValorMensalValidator : AbstractValidator<AlterarValorMensalC
 public class AlterarValorMensalHandler : IRequestHandler<AlterarValorMensalCommand, AlterarValorMensalResponse>
 {
     private readonly IClienteRepository _clienteRepo;
+    private readonly IHistoricoAporteRepository _historicoRepo;
 
-    public AlterarValorMensalHandler(IClienteRepository clienteRepo) => _clienteRepo = clienteRepo;
+    public AlterarValorMensalHandler(IClienteRepository clienteRepo, IHistoricoAporteRepository historicoRepo)
+    {
+        _clienteRepo = clienteRepo;
+        _historicoRepo = historicoRepo;
+    }
 
     public async Task<AlterarValorMensalResponse> Handle(AlterarValorMensalCommand request, CancellationToken ct)
     {
@@ -29,6 +35,9 @@ public class AlterarValorMensalHandler : IRequestHandler<AlterarValorMensalComma
         var valorAnterior = cliente.ValorMensal;
         cliente.AlterarValorMensal(request.NovoValorMensal);
         await _clienteRepo.AtualizarAsync(cliente, ct);
+
+        // RN-013: Manter histórico de alterações do valor mensal
+        await _historicoRepo.AdicionarAsync(new HistoricoAporte(cliente.Id, valorAnterior, cliente.ValorMensal), ct);
 
         return new AlterarValorMensalResponse(
             cliente.Id, valorAnterior, cliente.ValorMensal,

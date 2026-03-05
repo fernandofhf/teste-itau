@@ -9,4 +9,10 @@ public interface IRebalanceamentoService
         CestaRecomendacao cestaAntiga,
         CestaRecomendacao cestaNova,
         CancellationToken ct = default);
+
+    // RN-050/051/052: Rebalanceamento por desvio de proporção (limiar sugerido: 5pp)
+    Task<ExecutarRebalanceamentoResponse> ExecutarRebalanceamentoPorDesvioAsync(
+        CestaRecomendacao cesta,
+        decimal limiarDesvioPercentual = 5m,
+        CancellationToken ct = default);
 }

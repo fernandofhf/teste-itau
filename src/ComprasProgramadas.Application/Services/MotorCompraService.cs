@@ -92,22 +92,22 @@ public class MotorCompraService : IMotorCompraService
     {
         _logger.LogInformation("Iniciando motor de compra para data {Data}", dataReferencia);
 
-        // Passo 1: Buscar clientes ativos
+        // Buscar clientes ativos
         var clientes = (await _clienteRepo.ObterAtivosAsync(ct)).ToList();
         if (!clientes.Any())
             return new ExecutarCompraResponse(DateTime.UtcNow, 0, 0,
                 Enumerable.Empty<OrdemCompraDto>(), Enumerable.Empty<DistribuicaoClienteDto>(),
                 Enumerable.Empty<ResiduoDto>(), 0, "Nenhum cliente ativo para compra.");
 
-        // Passo 2: Calcular 1/3 de cada cliente
+        // Calcular 1/3 de cada cliente
         var aportesPorCliente = clientes.ToDictionary(c => c.Id, c => c.CalcularValorParcela());
         var totalConsolidado = aportesPorCliente.Values.Sum();
-
-        // Passo 3: Buscar cesta ativa
+        
+        // Buscar cesta ativa
         var cesta = await _cestaRepo.ObterAtivaAsync(ct)
             ?? throw new InvalidOperationException("Nenhuma cesta ativa encontrada.");
 
-        // Passo 4: Obter cotações do arquivo COTAHIST
+        // Obter cotações do arquivo COTAHIST
         var tickersCesta = cesta.Itens.Select(i => i.Ticker).ToList();
         var cotacoesParsed = _cotahistService.ObterCotacoesPorTickers(_pastaCotacoes, tickersCesta).ToList();
 
@@ -117,13 +117,13 @@ public class MotorCompraService : IMotorCompraService
         var cotacoes = (await _cotacaoRepo.ObterUltimasCotacoesPorTickersAsync(tickersCesta, ct))
             .ToDictionary(c => c.Ticker, c => c.PrecoFechamento);
 
-        // Passo 5: Verificar saldo custódia master
+        // Verificar saldo custódia master
         var master = await _contaRepo.ObterMasterAsync(ct)
             ?? throw new InvalidOperationException("Conta master não encontrada.");
         var custodiasMaster = (await _custodiaRepo.ObterCustodiaMasterAsync(ct))
             .ToDictionary(c => c.Ticker, c => c);
 
-        // Passo 6: Calcular quantidade a comprar por ativo
+        // Calcular quantidade a comprar por ativo
         var ordensParaExecutar = new List<(string Ticker, int QtdComprar, decimal Preco)>();
         foreach (var item in cesta.Itens)
         {
@@ -141,7 +141,7 @@ public class MotorCompraService : IMotorCompraService
             ordensParaExecutar.Add((item.Ticker, qtdComprar, preco));
         }
 
-        // Passo 7: Separar lote padrão vs fracionário e registrar ordens
+        // Separar lote padrão vs fracionário e registrar ordens
         var ordensDb = new List<OrdemCompra>();
         var ordensDto = new List<OrdemCompraDto>();
 
@@ -168,7 +168,7 @@ public class MotorCompraService : IMotorCompraService
         if (ordensDb.Any())
             await _ordemRepo.AdicionarRangeAsync(ordensDb, ct);
 
-        // Passo 8: Atualizar custódia master (+compras)
+        // Atualizar custódia master (+compras)
         var qtdDisponivel = new Dictionary<string, int>();
         foreach (var (ticker, qtdComprar, preco) in ordensParaExecutar)
         {
@@ -185,14 +185,24 @@ public class MotorCompraService : IMotorCompraService
                 }
                 else
                 {
-                    var novaCustodia = new Custodia(master.Id, ticker);
-                    novaCustodia.AdicionarAtivos(qtdComprar, preco);
-                    await _custodiaRepo.AdicionarAsync(novaCustodia, ct);
+                    // Pode existir com Quantidade=0 (distribuída anteriormente); não está no dicionário pois foi filtrada
+                    var existente = await _custodiaRepo.ObterPorContaETickerAsync(master.Id, ticker, ct);
+                    if (existente != null)
+                    {
+                        existente.AdicionarAtivos(qtdComprar, preco);
+                        await _custodiaRepo.AtualizarAsync(existente, ct);
+                    }
+                    else
+                    {
+                        var novaCustodia = new Custodia(master.Id, ticker);
+                        novaCustodia.AdicionarAtivos(qtdComprar, preco);
+                        await _custodiaRepo.AdicionarAsync(novaCustodia, ct);
+                    }
                 }
             }
         }
 
-        // Passo 9-14: Distribuir para cada cliente
+        // Distribuir para cada cliente
         var distribuicoesDto = new List<DistribuicaoClienteDto>();
         var distribuicoesDb = new List<Distribuicao>();
         int eventosIRPublicados = 0;
