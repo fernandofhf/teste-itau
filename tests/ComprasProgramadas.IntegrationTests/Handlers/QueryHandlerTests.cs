@@ -4,7 +4,7 @@ using ComprasProgramadas.Application.Commands.Motor;
 using ComprasProgramadas.Application.DTOs;
 using ComprasProgramadas.Application.Queries.Admin;
 using ComprasProgramadas.Application.Queries.Clientes;
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using ComprasProgramadas.Domain.Entities;
 using ComprasProgramadas.Domain.Enums;
 using ComprasProgramadas.Infrastructure.Persistence.Repositories;

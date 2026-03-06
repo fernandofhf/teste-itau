@@ -1,5 +1,5 @@
 using ComprasProgramadas.Application.DTOs;
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using ComprasProgramadas.Domain.Entities;
 using ComprasProgramadas.Domain.Interfaces;
 using FluentValidation;

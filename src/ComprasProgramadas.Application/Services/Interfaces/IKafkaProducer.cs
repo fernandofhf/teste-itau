@@ -1,4 +1,4 @@
-namespace ComprasProgramadas.Application.Services;
+namespace ComprasProgramadas.Application.Services.Interfaces;
 
 public interface IKafkaProducer
 {

@@ -1,4 +1,5 @@
 using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;

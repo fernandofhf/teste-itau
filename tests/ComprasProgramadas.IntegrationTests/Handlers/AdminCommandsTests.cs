@@ -1,7 +1,7 @@
 using ComprasProgramadas.Application.Commands.Admin;
 using ComprasProgramadas.Application.DTOs;
 using ComprasProgramadas.Application.Queries.Admin;
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using ComprasProgramadas.Infrastructure.Persistence.Repositories;
 using ComprasProgramadas.IntegrationTests.Helpers;
 using FluentAssertions;

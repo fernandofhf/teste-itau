@@ -1,5 +1,6 @@
 using ComprasProgramadas.Application.Commands.Clientes;
 using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using ComprasProgramadas.Domain.Entities;
 using ComprasProgramadas.Domain.Enums;
 using ComprasProgramadas.Infrastructure.Persistence.Context;

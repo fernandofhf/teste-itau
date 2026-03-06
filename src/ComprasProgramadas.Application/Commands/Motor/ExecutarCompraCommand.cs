@@ -1,5 +1,5 @@
 using ComprasProgramadas.Application.DTOs;
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using MediatR;
 
 namespace ComprasProgramadas.Application.Commands.Motor;

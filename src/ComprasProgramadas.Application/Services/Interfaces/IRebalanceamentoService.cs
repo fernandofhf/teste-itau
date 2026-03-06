@@ -1,7 +1,7 @@
 using ComprasProgramadas.Application.DTOs;
 using ComprasProgramadas.Domain.Entities;
 
-namespace ComprasProgramadas.Application.Services;
+namespace ComprasProgramadas.Application.Services.Interfaces;
 
 public interface IRebalanceamentoService
 {

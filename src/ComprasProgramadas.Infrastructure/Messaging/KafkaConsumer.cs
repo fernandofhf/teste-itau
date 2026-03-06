@@ -1,4 +1,4 @@
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -23,20 +23,15 @@ public class KafkaConsumer : IKafkaConsumer
         var config = new ConsumerConfig
         {
             BootstrapServers = _bootstrapServers,
-            // GroupId único por chamada para não persistir offset entre requisições
             GroupId = $"api-reader-{Guid.NewGuid():N}",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
-            // Não registrar o consumer group no broker — leitura stateless
             EnablePartitionEof = true
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
 
-        // Buscar partições disponíveis no tópico
-        var metadata = consumer.GetWatermarkOffsets(new TopicPartition(topico, new Partition(0)));
-
-        // Atribuir manualmente a partir do offset 0 em todas as partições
+        // Obter metadados do tópico via AdminClient
         var adminConfig = new AdminClientConfig { BootstrapServers = _bootstrapServers };
         using var adminClient = new AdminClientBuilder(adminConfig).Build();
 
@@ -54,33 +49,35 @@ public class KafkaConsumer : IKafkaConsumer
         if (topicMeta.Topics.Count == 0 || topicMeta.Topics[0].Error.IsError)
             return mensagens;
 
-        var partitions = topicMeta.Topics[0].Partitions
-            .Select(p => new TopicPartitionOffset(topico, p.PartitionId, Offset.Beginning))
-            .ToList();
+        // QueryWatermarkOffsets consulta o broker — GetWatermarkOffsets usa apenas cache local (sempre vazio)
+        var assignments = new List<TopicPartitionOffset>();
+        var highWatermarks = new Dictionary<int, long>();
 
-        consumer.Assign(partitions);
-
-        // Calcular quantas mensagens existem ao total para saber quando parar
-        long totalMensagens = 0;
-        foreach (var partition in topicMeta.Topics[0].Partitions)
+        foreach (var p in topicMeta.Topics[0].Partitions)
         {
-            var watermarks = consumer.GetWatermarkOffsets(new TopicPartition(topico, partition.PartitionId));
-            totalMensagens += watermarks.High - watermarks.Low;
+            var tp = new TopicPartition(topico, p.PartitionId);
+            var wm = consumer.QueryWatermarkOffsets(tp, TimeSpan.FromSeconds(5));
+            highWatermarks[p.PartitionId] = wm.High;
+
+            // Só atribuir partições que têm mensagens
+            if (wm.High > 0)
+                assignments.Add(new TopicPartitionOffset(topico, p.PartitionId, Offset.Beginning));
         }
 
-        if (totalMensagens == 0)
+        if (!assignments.Any())
             return mensagens;
+
+        consumer.Assign(assignments);
 
         var timeout = TimeSpan.FromMilliseconds(timeoutMs);
         var eofPartitions = new HashSet<int>();
-        var totalPartitions = topicMeta.Topics[0].Partitions.Count;
 
-        while (eofPartitions.Count < totalPartitions)
+        while (eofPartitions.Count < assignments.Count)
         {
             var result = consumer.Consume(timeout);
 
             if (result == null)
-                break; // timeout sem mensagem nova
+                break; // timeout sem atividade
 
             if (result.IsPartitionEOF)
             {
@@ -94,6 +91,14 @@ public class KafkaConsumer : IKafkaConsumer
                 result.Partition.Value,
                 result.Message.Timestamp.UtcDateTime,
                 result.Message.Value));
+
+            // Parar se já chegamos ao high watermark de todas as partições
+            if (assignments.All(a =>
+                mensagens.Where(m => m.Particao == a.Partition.Value)
+                         .Select(m => m.Offset)
+                         .DefaultIfEmpty(-1)
+                         .Max() >= highWatermarks[a.Partition.Value] - 1))
+                break;
         }
 
         _logger.LogInformation("Lidas {Total} mensagens do tópico {Topico}", mensagens.Count, topico);

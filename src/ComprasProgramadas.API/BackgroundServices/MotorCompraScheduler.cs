@@ -1,4 +1,4 @@
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 
 namespace ComprasProgramadas.API.BackgroundServices;
 

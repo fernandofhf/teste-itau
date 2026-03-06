@@ -1,4 +1,5 @@
 using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using ComprasProgramadas.Domain.Interfaces;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
