@@ -75,7 +75,7 @@ public class GetCarteiraHandlerTests
         var custodiaRepo = new CustodiaRepository(context);
         var cotacaoRepo = new CotacaoRepository(context);
 
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Pedro", "33322211100", "p@test.com", 600m),
             CancellationToken.None);
@@ -115,7 +115,7 @@ public class GetCarteiraHandlerTests
         var cotacaoRepo = new CotacaoRepository(context);
 
         // Criar cliente e conta
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Ana Costa", "77788899911", "ana@test.com", 900m),
             CancellationToken.None);
@@ -200,7 +200,7 @@ public class GetRentabilidadeHandlerTests
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
 
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("João Teste", "11122233344", "j@t.com", 300m),
             CancellationToken.None);
@@ -233,7 +233,7 @@ public class GetRentabilidadeHandlerTests
         var cotacaoRepo = new CotacaoRepository(context);
         var distribuicaoRepo = new DistribuicaoRepository(context);
 
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Ana Rend", "44455566677", "a@t.com", 900m),
             CancellationToken.None);

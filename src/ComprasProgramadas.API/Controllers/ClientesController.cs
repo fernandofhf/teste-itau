@@ -56,6 +56,26 @@ public class ClientesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Consultar histórico de ordens executadas para o cliente (compras do motor + rebalanceamentos)</summary>
+    [HttpGet("{clienteId:long}/ordens")]
+    [ProducesResponseType(typeof(OrdensClienteResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> OrdensCliente(long clienteId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetOrdensClienteQuery(clienteId), ct);
+        return Ok(result);
+    }
+
+    /// <summary>Consultar histórico de alterações do valor mensal de aporte</summary>
+    [HttpGet("{clienteId:long}/historico-aportes")]
+    [ProducesResponseType(typeof(HistoricoAportesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> HistoricoAportes(long clienteId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetHistoricoAportesQuery(clienteId), ct);
+        return Ok(result);
+    }
+
     /// <summary>Consultar rentabilidade detalhada (histórico de aportes e evolução)</summary>
     [HttpGet("{clienteId:long}/rentabilidade")]
     [ProducesResponseType(typeof(RentabilidadeResponse), StatusCodes.Status200OK)]

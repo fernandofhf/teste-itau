@@ -33,6 +33,7 @@ public class RebalanceamentoServiceTests
             new CotacaoRepository(context),
             cotahistService ?? Mock.Of<ICotahistService>(),
             kafkaProducer ?? Mock.Of<IKafkaProducer>(),
+            new HistoricoOrdemClienteRepository(context),
             config,
             Mock.Of<ILogger<RebalanceamentoService>>());
     }
@@ -62,7 +63,7 @@ public class RebalanceamentoServiceTests
         // Criar cliente com conta filhote
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Maria", "98765432100", "m@test.com", 600m),
             CancellationToken.None);
@@ -134,7 +135,7 @@ public class RebalanceamentoServiceTests
 
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Carlos", "11122244455", "c@test.com", 600m),
             CancellationToken.None);
@@ -175,7 +176,7 @@ public class RebalanceamentoServiceTests
 
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Luiza", "99988877766", "l@test.com", 600m),
             CancellationToken.None);

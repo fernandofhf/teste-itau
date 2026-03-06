@@ -20,6 +20,7 @@ public class MotorCompraService : IMotorCompraService
     private readonly ICotacaoRepository _cotacaoRepo;
     private readonly ICotahistService _cotahistService;
     private readonly IKafkaProducer _kafkaProducer;
+    private readonly IHistoricoOrdemClienteRepository _historicoOrdemRepo;
     private readonly ILogger<MotorCompraService> _logger;
     private readonly string _pastaCotacoes;
     private const string TOPICO_IR = "ir-eventos";
@@ -35,6 +36,7 @@ public class MotorCompraService : IMotorCompraService
         ICotacaoRepository cotacaoRepo,
         ICotahistService cotahistService,
         IKafkaProducer kafkaProducer,
+        IHistoricoOrdemClienteRepository historicoOrdemRepo,
         IConfiguration configuration,
         ILogger<MotorCompraService> logger)
     {
@@ -48,6 +50,7 @@ public class MotorCompraService : IMotorCompraService
         _cotacaoRepo = cotacaoRepo;
         _cotahistService = cotahistService;
         _kafkaProducer = kafkaProducer;
+        _historicoOrdemRepo = historicoOrdemRepo;
         _logger = logger;
         _pastaCotacoes = configuration["CotacoesPath"] ?? "cotacoes";
     }
@@ -186,7 +189,6 @@ public class MotorCompraService : IMotorCompraService
                 }
                 else
                 {
-                    // Pode existir com Quantidade=0 (distribuída anteriormente); não está no dicionário pois foi filtrada
                     var existente = await _custodiaRepo.ObterPorContaETickerAsync(master.Id, ticker, ct);
                     if (existente != null)
                     {
@@ -206,6 +208,7 @@ public class MotorCompraService : IMotorCompraService
         // Distribuir para cada cliente
         var distribuicoesDto = new List<DistribuicaoClienteDto>();
         var distribuicoesDb = new List<Distribuicao>();
+        var ordensClientes = new List<HistoricoOrdemCliente>();
         int eventosIRPublicados = 0;
 
         var distribuicaoAcumulada = new Dictionary<string, int>();
@@ -247,6 +250,7 @@ public class MotorCompraService : IMotorCompraService
                     var dist = new Distribuicao(ordemPrincipal.Id, custodiaFilhote.Id, ticker, qtdCliente, preco);
                     distribuicoesDb.Add(dist);
                     ativosDistribuidos.Add(new AtivoDistribuidoDto(ticker, qtdCliente));
+                    ordensClientes.Add(new HistoricoOrdemCliente(cliente.Id, ticker, TipoOrdem.Compra, qtdCliente, preco, OrigemOrdem.MotorCompra));
 
                     // Calcular IR dedo-duro
                     var irDedoDuro = dist.CalcularIRDedoDuro();
@@ -285,6 +289,9 @@ public class MotorCompraService : IMotorCompraService
 
         if (distribuicoesDb.Any())
             await _distribuicaoRepo.AdicionarRangeAsync(distribuicoesDb, ct);
+
+        if (ordensClientes.Any())
+            await _historicoOrdemRepo.AdicionarRangeAsync(ordensClientes, ct);
 
         // Passo 15-16: Descontar distribuídos e calcular resíduos
         var residuos = new List<ResiduoDto>();

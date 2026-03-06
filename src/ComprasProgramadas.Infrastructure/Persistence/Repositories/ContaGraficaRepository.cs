@@ -27,4 +27,5 @@ public class ContaGraficaRepository : IContaGraficaRepository
         await _context.ContasGraficas.AddAsync(conta, ct);
         await _context.SaveChangesAsync(ct);
     }
+
 }

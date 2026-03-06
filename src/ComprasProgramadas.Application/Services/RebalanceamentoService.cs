@@ -18,6 +18,7 @@ public class RebalanceamentoService : IRebalanceamentoService
     private readonly ICotacaoRepository _cotacaoRepo;
     private readonly ICotahistService _cotahistService;
     private readonly IKafkaProducer _kafkaProducer;
+    private readonly IHistoricoOrdemClienteRepository _historicoOrdemRepo;
     private readonly ILogger<RebalanceamentoService> _logger;
     private readonly string _pastaCotacoes;
     private const string TOPICO_IR = "ir-eventos";
@@ -32,6 +33,7 @@ public class RebalanceamentoService : IRebalanceamentoService
         ICotacaoRepository cotacaoRepo,
         ICotahistService cotahistService,
         IKafkaProducer kafkaProducer,
+        IHistoricoOrdemClienteRepository historicoOrdemRepo,
         IConfiguration configuration,
         ILogger<RebalanceamentoService> logger)
     {
@@ -43,6 +45,7 @@ public class RebalanceamentoService : IRebalanceamentoService
         _cotacaoRepo = cotacaoRepo;
         _cotahistService = cotahistService;
         _kafkaProducer = kafkaProducer;
+        _historicoOrdemRepo = historicoOrdemRepo;
         _logger = logger;
         _pastaCotacoes = configuration["CotacoesPath"] ?? "cotacoes";
     }
@@ -152,6 +155,7 @@ public class RebalanceamentoService : IRebalanceamentoService
         decimal totalValorVendas = 0;
         decimal lucroLiquido = 0;
         var rebalanceamentos = new List<Rebalanceamento>();
+        var ordensHistorico = new List<HistoricoOrdemCliente>();
 
         // Passo 1: Vender ativos que saíram da cesta (RN-040)
         foreach (var ticker in tickersSairam)
@@ -165,6 +169,7 @@ public class RebalanceamentoService : IRebalanceamentoService
             totalValorVendas += valorVenda;
             lucroLiquido += lucroAtivo;
 
+            ordensHistorico.Add(new HistoricoOrdemCliente(cliente.Id, ticker, TipoOrdem.Venda, custodia.Quantidade, cotacao, OrigemOrdem.RebalanceamentoCesta));
             custodia.RemoverAtivos(custodia.Quantidade);
             await _custodiaRepo.AtualizarAsync(custodia, ct);
 
@@ -210,6 +215,7 @@ public class RebalanceamentoService : IRebalanceamentoService
                     var lucroV = qtdVender * (cotacao - custodia.PrecoMedio);
                     totalValorVendas += valorV;
                     lucroLiquido += lucroV;
+                    ordensHistorico.Add(new HistoricoOrdemCliente(cliente.Id, ticker, TipoOrdem.Venda, qtdVender, cotacao, OrigemOrdem.RebalanceamentoCesta));
                     custodia.RemoverAtivos(qtdVender);
                     await _custodiaRepo.AtualizarAsync(custodia, ct);
                     rebalanceamentos.Add(new Rebalanceamento(cliente.Id, TipoRebalanceamento.MudancaCesta, ticker, null, valorV));
@@ -254,6 +260,7 @@ public class RebalanceamentoService : IRebalanceamentoService
                     }
                     custodiaEntrada.AdicionarAtivos(qtdComprar, cotacao);
                     await _custodiaRepo.AtualizarAsync(custodiaEntrada, ct);
+                    ordensHistorico.Add(new HistoricoOrdemCliente(cliente.Id, ticker, TipoOrdem.Compra, qtdComprar, cotacao, OrigemOrdem.RebalanceamentoCesta));
                     rebalanceamentos.Add(new Rebalanceamento(cliente.Id, TipoRebalanceamento.MudancaCesta, null, ticker, 0));
                 }
             }
@@ -261,6 +268,9 @@ public class RebalanceamentoService : IRebalanceamentoService
 
         if (rebalanceamentos.Any())
             await _rebalanceamentoRepo.AdicionarRangeAsync(rebalanceamentos, ct);
+
+        if (ordensHistorico.Any())
+            await _historicoOrdemRepo.AdicionarRangeAsync(ordensHistorico, ct);
 
         // Calcular e publicar IR sobre vendas (RN-044 a RN-048)
         if (totalValorVendas > 0)
@@ -310,6 +320,7 @@ public class RebalanceamentoService : IRebalanceamentoService
         decimal totalValorVendas = 0;
         decimal lucroLiquido = 0;
         var rebalanceamentos = new List<Rebalanceamento>();
+        var ordensHistorico = new List<HistoricoOrdemCliente>();
         var alvosCompra = new Dictionary<string, decimal>(); // ticker → percentual alvo
 
         foreach (var item in cesta.Itens)
@@ -336,6 +347,7 @@ public class RebalanceamentoService : IRebalanceamentoService
                     var lucroV = qtdVender * (cotacao - custodia.PrecoMedio);
                     totalValorVendas += valorV;
                     lucroLiquido += lucroV;
+                    ordensHistorico.Add(new HistoricoOrdemCliente(cliente.Id, item.Ticker, TipoOrdem.Venda, qtdVender, cotacao, OrigemOrdem.RebalanceamentoDesvio));
                     custodia.RemoverAtivos(qtdVender);
                     await _custodiaRepo.AtualizarAsync(custodia, ct);
                     rebalanceamentos.Add(new Rebalanceamento(cliente.Id, TipoRebalanceamento.DesvioProporcao, item.Ticker, null, valorV));
@@ -372,6 +384,7 @@ public class RebalanceamentoService : IRebalanceamentoService
                     }
                     custodiaEntrada.AdicionarAtivos(qtdComprar, cotacao);
                     await _custodiaRepo.AtualizarAsync(custodiaEntrada, ct);
+                    ordensHistorico.Add(new HistoricoOrdemCliente(cliente.Id, ticker, TipoOrdem.Compra, qtdComprar, cotacao, OrigemOrdem.RebalanceamentoDesvio));
                     rebalanceamentos.Add(new Rebalanceamento(cliente.Id, TipoRebalanceamento.DesvioProporcao, null, ticker, 0));
                 }
             }
@@ -379,6 +392,9 @@ public class RebalanceamentoService : IRebalanceamentoService
 
         if (rebalanceamentos.Any())
             await _rebalanceamentoRepo.AdicionarRangeAsync(rebalanceamentos, ct);
+
+        if (ordensHistorico.Any())
+            await _historicoOrdemRepo.AdicionarRangeAsync(ordensHistorico, ct);
 
         // RN-052: Calcular IR sobre as vendas do rebalanceamento por desvio
         if (totalValorVendas > 0)

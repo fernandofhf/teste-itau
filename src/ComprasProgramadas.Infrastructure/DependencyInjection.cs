@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ICotacaoRepository, CotacaoRepository>();
         services.AddScoped<IRebalanceamentoRepository, RebalanceamentoRepository>();
         services.AddScoped<IHistoricoAporteRepository, HistoricoAporteRepository>();
+        services.AddScoped<IHistoricoOrdemClienteRepository, HistoricoOrdemClienteRepository>();
 
         services.AddSingleton<CotahistParser>();
         services.AddSingleton<ICotahistService, CotahistService>();

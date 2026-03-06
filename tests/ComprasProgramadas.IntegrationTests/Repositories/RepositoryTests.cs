@@ -30,7 +30,7 @@ public class DistribuicaoRepositoryTests
         // Criar cliente + conta filhote
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Teste", "11122233344", "t@t.com", 300m),
             CancellationToken.None);
@@ -65,7 +65,7 @@ public class DistribuicaoRepositoryTests
 
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         var adesao = await adesaoHandler.Handle(
             new AderirProdutoCommand("Maria", "22233344455", "m@t.com", 300m),
             CancellationToken.None);

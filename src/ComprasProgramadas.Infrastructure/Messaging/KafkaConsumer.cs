@@ -104,4 +104,56 @@ public class KafkaConsumer : IKafkaConsumer
         _logger.LogInformation("Lidas {Total} mensagens do tópico {Topico}", mensagens.Count, topico);
         return mensagens;
     }
+
+    public async Task<int> LimparTopicoAsync(string topico)
+    {
+        var adminConfig = new AdminClientConfig { BootstrapServers = _bootstrapServers };
+        using var adminClient = new AdminClientBuilder(adminConfig).Build();
+
+        Metadata topicMeta;
+        try
+        {
+            topicMeta = adminClient.GetMetadata(topico, TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Não foi possível obter metadados do tópico {Topico}", topico);
+            return 0;
+        }
+
+        if (topicMeta.Topics.Count == 0 || topicMeta.Topics[0].Error.IsError)
+            return 0;
+
+        var consumerConfig = new ConsumerConfig
+        {
+            BootstrapServers = _bootstrapServers,
+            GroupId = $"api-cleaner-{Guid.NewGuid():N}",
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            EnableAutoCommit = false
+        };
+
+        using var consumer = new ConsumerBuilder<Ignore, string>(consumerConfig).Build();
+
+        var recordsToDelete = new List<TopicPartitionOffset>();
+        var totalMensagens = 0L;
+
+        foreach (var p in topicMeta.Topics[0].Partitions)
+        {
+            var tp = new TopicPartition(topico, p.PartitionId);
+            var wm = consumer.QueryWatermarkOffsets(tp, TimeSpan.FromSeconds(5));
+            if (wm.High > wm.Low)
+            {
+                totalMensagens += wm.High - wm.Low;
+                recordsToDelete.Add(new TopicPartitionOffset(topico, p.PartitionId, wm.High));
+            }
+        }
+
+        if (recordsToDelete.Count == 0)
+            return 0;
+
+        await adminClient.DeleteRecordsAsync(recordsToDelete);
+
+        _logger.LogInformation("Limpas {Total} mensagens do tópico {Topico}", totalMensagens, topico);
+        return (int)totalMensagens;
+    }
 }

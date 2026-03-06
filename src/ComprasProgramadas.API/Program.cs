@@ -77,6 +77,7 @@ app.UseSerilogRequestLogging(opts =>
     opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0}ms)";
 });
 app.UseMiddleware<ExceptionMiddleware>();
+app.UseCors();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -84,8 +85,6 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Compras Programadas API v1");
     c.RoutePrefix = "swagger";
 });
-
-app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
 

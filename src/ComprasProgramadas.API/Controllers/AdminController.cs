@@ -74,20 +74,30 @@ public class AdminController : ControllerBase
         if (!_env.IsDevelopment())
             return Forbid();
 
-        // Deletar na ordem correta respeitando FKs
-        await _context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Distribuicoes;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE EventosIR;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Rebalanceamentos;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE OrdensCompra;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Custodias;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE ContasGraficas;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Clientes;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE ItensCesta;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE CestasRecomendacao;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Cotacoes;", ct);
-        await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE HistoricoAportes;", ct);
-        await _context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1;", ct);
+        var conn = _context.Database.GetDbConnection();
+        await conn.OpenAsync(ct);
+        await using (var cmd = conn.CreateCommand())
+        {
+            var tabelas = new[]
+            {
+                "Distribuicoes", "EventosIR", "Rebalanceamentos", "OrdensCompra",
+                "Custodias", "HistoricoAportes", "ContasGraficas", "Clientes",
+                "ItensCesta", "CestasRecomendacao", "Cotacoes", "HistoricoOrdensCliente"
+            };
+
+            cmd.CommandText = "SET FOREIGN_KEY_CHECKS = 0;";
+            await cmd.ExecuteNonQueryAsync(ct);
+
+            foreach (var tabela in tabelas)
+            {
+                cmd.CommandText = $"TRUNCATE TABLE {tabela};";
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+
+            cmd.CommandText = "SET FOREIGN_KEY_CHECKS = 1;";
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+        await conn.CloseAsync();
 
         // Recriar conta master
         var master = ContaGrafica.CriarMaster();

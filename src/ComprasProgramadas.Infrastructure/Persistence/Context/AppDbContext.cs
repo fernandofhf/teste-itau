@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Cotacao> Cotacoes => Set<Cotacao>();
     public DbSet<Rebalanceamento> Rebalanceamentos => Set<Rebalanceamento>();
     public DbSet<HistoricoAporte> HistoricoAportes => Set<HistoricoAporte>();
+    public DbSet<HistoricoOrdemCliente> HistoricoOrdensCliente => Set<HistoricoOrdemCliente>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -149,6 +150,22 @@ public class AppDbContext : DbContext
             e.Property(h => h.Id).ValueGeneratedOnAdd();
             e.Property(h => h.ValorAnterior).HasColumnType("decimal(18,2)");
             e.Property(h => h.ValorNovo).HasColumnType("decimal(18,2)");
+            e.HasOne(h => h.Cliente)
+                .WithMany()
+                .HasForeignKey(h => h.ClienteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // HistoricoOrdemCliente
+        modelBuilder.Entity<HistoricoOrdemCliente>(e =>
+        {
+            e.HasKey(h => h.Id);
+            e.Property(h => h.Id).ValueGeneratedOnAdd();
+            e.Property(h => h.Ticker).HasMaxLength(10).IsRequired();
+            e.Property(h => h.TipoOrdem).HasConversion<string>().HasMaxLength(10);
+            e.Property(h => h.PrecoUnitario).HasColumnType("decimal(18,4)");
+            e.Property(h => h.ValorTotal).HasColumnType("decimal(18,2)");
+            e.Property(h => h.Origem).HasConversion<string>().HasMaxLength(30);
             e.HasOne(h => h.Cliente)
                 .WithMany()
                 .HasForeignKey(h => h.ClienteId)

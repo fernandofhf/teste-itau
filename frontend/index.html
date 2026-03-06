@@ -268,6 +268,7 @@
     <button onclick="showPanel('valor', this)">💰 Alterar Valor</button>
     <button onclick="showPanel('carteira', this)">📊 Carteira</button>
     <button onclick="showPanel('rentabilidade', this)">📈 Rentabilidade</button>
+    <button onclick="showPanel('ordens', this)">📋 Ordens</button>
 
     <div class="section-label">Admin</div>
     <button onclick="showPanel('cesta', this)">🧺 Cestas</button>
@@ -403,12 +404,35 @@
         <h3><span class="method-badge GET">GET</span> /api/clientes/{clienteId}/carteira</h3>
         <div class="form-row">
           <div class="form-group">
-            <label>ID do Cliente (GUID)</label>
-            <input id="cart-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+            <label>ID do Cliente</label>
+            <input id="cart-id" type="text" placeholder="1" />
           </div>
         </div>
         <button class="btn btn-primary" onclick="getCarteira()">Consultar Carteira</button>
         <div id="resp-carteira" class="response-box"></div>
+      </div>
+
+      <div id="carteira-grid-wrap" style="display:none;">
+        <!-- Resumo -->
+        <div id="carteira-resumo" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px;"></div>
+        <!-- Tabela de ativos -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+            <thead>
+              <tr style="background:#f7fafc;border-bottom:2px solid var(--border);">
+                <th style="padding:10px 14px;text-align:left;">Ticker</th>
+                <th style="padding:10px 14px;text-align:right;">Qtd</th>
+                <th style="padding:10px 14px;text-align:right;">P. Médio</th>
+                <th style="padding:10px 14px;text-align:right;">Cotação Atual</th>
+                <th style="padding:10px 14px;text-align:right;">Valor Atual</th>
+                <th style="padding:10px 14px;text-align:right;">P&L (R$)</th>
+                <th style="padding:10px 14px;text-align:right;">P&L (%)</th>
+                <th style="padding:10px 14px;text-align:right;">Composição</th>
+              </tr>
+            </thead>
+            <tbody id="carteira-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -427,6 +451,43 @@
         </div>
         <button class="btn btn-primary" onclick="getRentabilidade()">Ver Rentabilidade</button>
         <div id="resp-rentabilidade" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- ORDENS -->
+    <div id="panel-ordens" class="panel">
+      <div class="panel-title">Ordens do Cliente</div>
+      <div class="panel-desc">Lista todas as ordens executadas para o cliente — compras do motor e operações de rebalanceamento.</div>
+
+      <div class="card">
+        <h3><span class="method-badge GET">GET</span> /api/clientes/{clienteId}/ordens</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ID do Cliente</label>
+            <input id="ord-id" type="text" placeholder="1" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="getOrdens()">Listar Ordens</button>
+        <div id="resp-ordens" class="response-box"></div>
+      </div>
+
+      <div id="ordens-table-wrap" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <table id="ordens-table" style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+            <thead>
+              <tr style="background:#f7fafc;border-bottom:2px solid var(--border);">
+                <th style="padding:10px 14px;text-align:left;">Data</th>
+                <th style="padding:10px 14px;text-align:left;">Ticker</th>
+                <th style="padding:10px 14px;text-align:left;">Tipo</th>
+                <th style="padding:10px 14px;text-align:right;">Qtd</th>
+                <th style="padding:10px 14px;text-align:right;">Preço Unit.</th>
+                <th style="padding:10px 14px;text-align:right;">Valor Total</th>
+                <th style="padding:10px 14px;text-align:left;">Origem</th>
+              </tr>
+            </thead>
+            <tbody id="ordens-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -698,13 +759,97 @@
   async function getCarteira() {
     const id = document.getElementById('cart-id').value.trim();
     if (!id) { toast('Informe o ID do cliente'); return; }
+
+    document.getElementById('carteira-grid-wrap').style.display = 'none';
     await call('GET', `/api/clientes/${id}/carteira`, undefined, 'resp-carteira');
+
+    const box = document.getElementById('resp-carteira');
+    if (!box.querySelector('.response-header.success')) return;
+    try {
+      const raw = document.getElementById('resp-carteira-body')?.textContent;
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      // Resumo
+      const r = data.resumo;
+      const fmt = v => `R$ ${(+v).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+      const fmtPct = v => `${(+v).toFixed(2)}%`;
+      const plColor = r.plTotal >= 0 ? 'var(--success)' : 'var(--error)';
+      document.getElementById('carteira-resumo').innerHTML = `
+        <div class="stat-card"><div class="label">Total Investido</div><div class="value">${fmt(r.valorTotalInvestido)}</div></div>
+        <div class="stat-card"><div class="label">Valor Atual</div><div class="value">${fmt(r.valorAtualCarteira)}</div></div>
+        <div class="stat-card"><div class="label">P&L Total</div><div class="value" style="color:${plColor}">${fmt(r.plTotal)}</div></div>
+        <div class="stat-card"><div class="label">Rentabilidade</div><div class="value" style="color:${plColor}">${fmtPct(r.rentabilidadePercentual)}</div></div>
+      `;
+
+      // Tabela de ativos
+      const tbody = document.getElementById('carteira-tbody');
+      tbody.innerHTML = '';
+      (data.ativos || []).forEach(a => {
+        const plColor = a.pl >= 0 ? '#276749' : '#c53030';
+        tbody.innerHTML += `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:9px 14px;font-weight:700;">${a.ticker}</td>
+          <td style="padding:9px 14px;text-align:right;">${a.quantidade}</td>
+          <td style="padding:9px 14px;text-align:right;">R$ ${(+a.precoMedio).toLocaleString('pt-BR',{minimumFractionDigits:4})}</td>
+          <td style="padding:9px 14px;text-align:right;">R$ ${(+a.cotacaoAtual).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="padding:9px 14px;text-align:right;font-weight:600;">R$ ${(+a.valorAtual).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="padding:9px 14px;text-align:right;color:${plColor};font-weight:600;">R$ ${(+a.pl).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="padding:9px 14px;text-align:right;color:${plColor};">${(+a.plPercentual).toFixed(2)}%</td>
+          <td style="padding:9px 14px;text-align:right;">${(+a.composicaoCarteira).toFixed(1)}%</td>
+        </tr>`;
+      });
+
+      document.getElementById('carteira-grid-wrap').style.display = 'block';
+    } catch {}
   }
 
   async function getRentabilidade() {
     const id = document.getElementById('rent-id').value.trim();
     if (!id) { toast('Informe o ID do cliente'); return; }
     await call('GET', `/api/clientes/${id}/rentabilidade`, undefined, 'resp-rentabilidade');
+  }
+
+  async function getOrdens() {
+    const id = document.getElementById('ord-id').value.trim();
+    if (!id) { toast('Informe o ID do cliente'); return; }
+
+    document.getElementById('ordens-table-wrap').style.display = 'none';
+    await call('GET', `/api/clientes/${id}/ordens`, undefined, 'resp-ordens');
+
+    // Renderizar tabela se sucesso
+    const box = document.getElementById('resp-ordens');
+    if (!box.querySelector('.response-header.success')) return;
+    try {
+      const raw = document.getElementById('resp-ordens-body')?.textContent;
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const tbody = document.getElementById('ordens-tbody');
+      tbody.innerHTML = '';
+      if (!data.ordens?.length) return;
+
+      const tipoColor = { 'Compra': '#276749', 'Venda': '#c53030' };
+      const origemLabel = {
+        'MotorCompra': 'Motor de Compra',
+        'RebalanceamentoCesta': 'Rebal. Cesta',
+        'RebalanceamentoDesvio': 'Rebal. Desvio'
+      };
+
+      data.ordens.forEach(o => {
+        const cor = tipoColor[o.tipoOrdem] || '#666';
+        const dt = new Date(o.dataOperacao).toLocaleString('pt-BR');
+        tbody.innerHTML += `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:9px 14px;color:var(--text-muted)">${dt}</td>
+          <td style="padding:9px 14px;font-weight:700;">${o.ticker}</td>
+          <td style="padding:9px 14px;"><span style="font-weight:700;color:${cor}">${o.tipoOrdem}</span></td>
+          <td style="padding:9px 14px;text-align:right;">${o.quantidade.toLocaleString('pt-BR')}</td>
+          <td style="padding:9px 14px;text-align:right;">R$ ${o.precoUnitario.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+          <td style="padding:9px 14px;text-align:right;font-weight:600;">R$ ${o.valorTotal.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+          <td style="padding:9px 14px;color:var(--text-muted);font-size:0.78rem;">${origemLabel[o.origem] || o.origem}</td>
+        </tr>`;
+      });
+
+      document.getElementById('ordens-table-wrap').style.display = 'block';
+    } catch {}
   }
 
   // ── CESTA ──

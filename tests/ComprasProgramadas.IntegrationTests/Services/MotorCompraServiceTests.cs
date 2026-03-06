@@ -35,6 +35,7 @@ public class MotorCompraServiceTests
             new CotacaoRepository(context),
             cotahistService ?? Mock.Of<ICotahistService>(),
             kafkaProducer ?? Mock.Of<IKafkaProducer>(),
+            new HistoricoOrdemClienteRepository(context),
             config,
             Mock.Of<ILogger<MotorCompraService>>());
     }
@@ -59,7 +60,7 @@ public class MotorCompraServiceTests
 
         var clienteRepo = new ClienteRepository(context);
         var contaRepo = new ContaGraficaRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         await adesaoHandler.Handle(
             new AderirProdutoCommand("João", "12345678901", "j@test.com", 300m),
             CancellationToken.None);
@@ -84,7 +85,7 @@ public class MotorCompraServiceTests
 
         // Criar cliente com adesão (cria conta filhote automaticamente)
         var clienteRepo = new ClienteRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         await adesaoHandler.Handle(
             new AderirProdutoCommand("Maria", "98765432100", "m@test.com", 300m),
             CancellationToken.None);
@@ -141,7 +142,7 @@ public class MotorCompraServiceTests
 
         // Criar cliente
         var clienteRepo = new ClienteRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         await adesaoHandler.Handle(
             new AderirProdutoCommand("Ana", "11122233344", "ana@test.com", 300m),
             CancellationToken.None);
@@ -176,7 +177,7 @@ public class MotorCompraServiceTests
         await contaRepo.AdicionarAsync(master);
 
         var clienteRepo = new ClienteRepository(context);
-        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo);
+        var adesaoHandler = new AderirProdutoHandler(clienteRepo, contaRepo, new HistoricoAporteRepository(context), new CustodiaRepository(context), new CestaRecomendacaoRepository(context));
         await adesaoHandler.Handle(
             new AderirProdutoCommand("Pedro", "55544433322", "p@test.com", 300m),
             CancellationToken.None);

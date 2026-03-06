@@ -24,3 +24,28 @@ public record AlterarValorMensalResponse(
     string Mensagem);
 
 public record ContaGraficaDto(long Id, string NumeroConta, string Tipo, DateTime DataCriacao);
+
+public record HistoricoAporteItemDto(
+    long Id,
+    decimal ValorAnterior,
+    decimal ValorNovo,
+    DateTime DataAlteracao);
+
+public record HistoricoAportesResponse(
+    long ClienteId,
+    IReadOnlyList<HistoricoAporteItemDto> Historico);
+
+public record OrdemClienteDto(
+    long Id,
+    string Ticker,
+    string TipoOrdem,
+    int Quantidade,
+    decimal PrecoUnitario,
+    decimal ValorTotal,
+    string Origem,
+    DateTime DataOperacao);
+
+public record OrdensClienteResponse(
+    long ClienteId,
+    int Total,
+    IReadOnlyList<OrdemClienteDto> Ordens);
