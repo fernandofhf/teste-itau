@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddSingleton<CotahistParser>();
         services.AddSingleton<ICotahistService, CotahistService>();
         services.AddSingleton<IKafkaProducer, KafkaProducer>();
+        services.AddSingleton<IKafkaConsumer, KafkaConsumer>();
 
         return services;
     }

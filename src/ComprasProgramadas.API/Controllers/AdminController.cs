@@ -22,15 +22,18 @@ public class AdminController : ControllerBase
     private readonly IWebHostEnvironment _env;
     private readonly IRebalanceamentoService _rebalanceamentoService;
     private readonly ICestaRecomendacaoRepository _cestaRepo;
+    private readonly IKafkaConsumer _kafkaConsumer;
 
     public AdminController(IMediator mediator, AppDbContext context, IWebHostEnvironment env,
-        IRebalanceamentoService rebalanceamentoService, ICestaRecomendacaoRepository cestaRepo)
+        IRebalanceamentoService rebalanceamentoService, ICestaRecomendacaoRepository cestaRepo,
+        IKafkaConsumer kafkaConsumer)
     {
         _mediator = mediator;
         _context = context;
         _env = env;
         _rebalanceamentoService = rebalanceamentoService;
         _cestaRepo = cestaRepo;
+        _kafkaConsumer = kafkaConsumer;
     }
 
     /// <summary>Cadastrar ou alterar a cesta Top Five (dispara rebalanceamento se existir cesta anterior)</summary>
@@ -106,6 +109,27 @@ public class AdminController : ControllerBase
 
         var result = await _rebalanceamentoService.ExecutarRebalanceamentoPorDesvioAsync(cesta, limiar, ct);
         return Ok(result);
+    }
+
+    /// <summary>Listar todas as mensagens publicadas no tópico Kafka (desde o offset 0)</summary>
+    [HttpGet("kafka/mensagens")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult MensagensKafka([FromQuery] string topico = "ir-eventos", [FromQuery] int timeoutMs = 2000)
+    {
+        var mensagens = _kafkaConsumer.LerTodasMensagens(topico, timeoutMs);
+
+        return Ok(new
+        {
+            topico,
+            total = mensagens.Count,
+            mensagens = mensagens.Select(m => new
+            {
+                m.Offset,
+                m.Particao,
+                m.Timestamp,
+                conteudo = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(m.Conteudo)
+            })
+        });
     }
 
     /// <summary>Consultar custódia da conta master (resíduos das distribuições)</summary>
