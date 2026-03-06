@@ -56,7 +56,17 @@
       "Bash(dotnet test)",
       "Bash(dotnet tool list -g)",
       "Bash(Test-Path \"C:\\\\Fernando\\\\Projetos\\\\teste-itau\\\\README.md\")",
-      "Bash(dotnet build -q)"
+      "Bash(dotnet build -q)",
+      "Bash(dotnet ef migrations add NullableClienteIdMaster --project src/ComprasProgramadas.Infrastructure --startup-project src/ComprasProgramadas.API)",
+      "Bash(dotnet ef database update --project src/ComprasProgramadas.Infrastructure --startup-project src/ComprasProgramadas.API)",
+      "Bash(dotnet build src/ComprasProgramadas.API -q)",
+      "Bash(docker exec compras_mysql mysql -uroot -proot compras_programadas -e \"SELECT Id, ClienteId, NumeroConta, Tipo FROM ContasGraficas;\")",
+      "Bash(grep -r \"CotacoesPath\\\\|cotacoes\" /c/Fernando/Projetos/teste-itau/src/ComprasProgramadas.API/appsettings*.json)",
+      "Bash(docker exec compras_mysql mysql -uroot -proot compras_programadas -e \"SELECT COUNT\\(*\\) as total_cotacoes FROM Cotacoes;\")",
+      "Bash(python3 -c \":*)",
+      "Bash(powershell.exe -File TesteCotahist.ps1)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 113824 /F)"
     ]
   }
 }
