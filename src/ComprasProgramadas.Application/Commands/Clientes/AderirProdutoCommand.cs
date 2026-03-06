@@ -4,6 +4,7 @@ using ComprasProgramadas.Domain.Enums;
 using ComprasProgramadas.Domain.Interfaces;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace ComprasProgramadas.Application.Commands.Clientes;
 
@@ -27,19 +28,22 @@ public class AderirProdutoHandler : IRequestHandler<AderirProdutoCommand, Adesao
     private readonly IHistoricoAporteRepository _historicoRepo;
     private readonly ICustodiaRepository _custodiaRepo;
     private readonly ICestaRecomendacaoRepository _cestaRepo;
+    private readonly ILogger<AderirProdutoHandler>? _logger;
 
     public AderirProdutoHandler(
         IClienteRepository clienteRepo,
         IContaGraficaRepository contaRepo,
         IHistoricoAporteRepository historicoRepo,
         ICustodiaRepository custodiaRepo,
-        ICestaRecomendacaoRepository cestaRepo)
+        ICestaRecomendacaoRepository cestaRepo,
+        ILogger<AderirProdutoHandler>? logger = null)
     {
         _clienteRepo = clienteRepo;
         _contaRepo = contaRepo;
         _historicoRepo = historicoRepo;
         _custodiaRepo = custodiaRepo;
         _cestaRepo = cestaRepo;
+        _logger = logger;
     }
 
     public async Task<AdesaoResponse> Handle(AderirProdutoCommand request, CancellationToken ct)
@@ -65,6 +69,10 @@ public class AderirProdutoHandler : IRequestHandler<AderirProdutoCommand, Adesao
 
         // RN-013: Registrar o valor inicial na adesão (valorAnterior = 0)
         await _historicoRepo.AdicionarAsync(new HistoricoAporte(cliente.Id, 0m, cliente.ValorMensal), ct);
+
+        _logger?.LogInformation(
+            "Nova adesão: ClienteId={ClienteId} Nome={Nome} CPF={CPF} ValorMensal={ValorMensal} Conta={NumeroConta}",
+            cliente.Id, cliente.Nome, request.CPF, cliente.ValorMensal, conta.NumeroConta);
 
         return new AdesaoResponse(
             cliente.Id, cliente.Nome, cliente.CPF, cliente.Email,

@@ -5,6 +5,7 @@ using ComprasProgramadas.Infrastructure;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 using System.Reflection;
 
 Log.Logger = new LoggerConfiguration()
@@ -18,14 +19,25 @@ Log.Logger = new LoggerConfiguration()
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((ctx, services, config) => config
-    .ReadFrom.Configuration(ctx.Configuration)
-    .ReadFrom.Services(services)
-    .Enrich.FromLogContext()
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
-    .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} {Message:lj}{NewLine}{Exception}"));
+builder.Host.UseSerilog((ctx, services, config) =>
+{
+    config
+        .ReadFrom.Configuration(ctx.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "ComprasProgramadas")
+        .Enrich.WithProperty("Environment", ctx.HostingEnvironment.EnvironmentName)
+        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning);
+
+    if (ctx.HostingEnvironment.IsProduction())
+        // JSON estruturado para ingestao por ferramentas como Elastic, Datadog, Grafana Loki
+        config.WriteTo.Console(new CompactJsonFormatter());
+    else
+        // Formato legivel no desenvolvimento
+        config.WriteTo.Console(
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} {Message:lj}{NewLine}{Exception}");
+});
 
 // Identificar a pasta cotacoes
 var rawCotacoesPath = builder.Configuration["CotacoesPath"] ?? "cotacoes";

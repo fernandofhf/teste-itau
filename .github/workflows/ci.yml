@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit Tests
+        run: |
+          dotnet test tests/ComprasProgramadas.UnitTests \
+            --no-build \
+            --configuration Release \
+            --verbosity normal \
+            --logger "console;verbosity=normal"
+
+      - name: Integration Tests
+        run: |
+          dotnet test tests/ComprasProgramadas.IntegrationTests \
+            --no-build \
+            --configuration Release \
+            --verbosity normal \
+            --logger "console;verbosity=normal"
