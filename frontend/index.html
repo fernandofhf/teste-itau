@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compras Programadas — Painel de Testes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #FF6200;
+      --primary-dark: #cc4f00;
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --text-muted: #718096;
+      --success: #38a169;
+      --error: #e53e3e;
+      --warning: #d69e2e;
+      --code-bg: #1a202c;
+      --radius: 8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    header .logo {
+      width: 44px; height: 44px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; color: white;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header p  { font-size: 0.8rem; color: #a0aec0; margin-top: 2px; }
+    header .api-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #fc8181; display: inline-block;
+    }
+    .status-dot.online { background: #68d391; }
+
+    /* ── Layout ── */
+    .layout { display: flex; height: calc(100vh - 84px); }
+
+    /* ── Sidebar ── */
+    nav {
+      width: 220px; min-width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px 0;
+    }
+    nav .section-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: .08em;
+      color: var(--text-muted); text-transform: uppercase;
+      padding: 12px 20px 6px;
+    }
+    nav button {
+      width: 100%; text-align: left;
+      padding: 9px 20px;
+      border: none; background: none; cursor: pointer;
+      font-size: 0.875rem; color: var(--text);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav button:hover  { background: #f7fafc; color: var(--primary); }
+    nav button.active { background: #fff5f0; color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
+
+    /* ── Main ── */
+    main {
+      flex: 1; overflow-y: auto;
+      padding: 28px 32px;
+    }
+
+    /* ── Panel ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-title {
+      font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;
+    }
+    .panel-desc {
+      font-size: 0.875rem; color: var(--text-muted); margin-bottom: 24px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h3 {
+      font-size: 0.9rem; font-weight: 600; margin-bottom: 14px;
+      color: var(--text-muted); display: flex; align-items: center; gap: 8px;
+    }
+    .method-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 4px; letter-spacing: .04em;
+    }
+    .GET    { background:#ebf8ff; color:#2b6cb0; }
+    .POST   { background:#f0fff4; color:#276749; }
+    .PUT    { background:#fffaf0; color:#c05621; }
+    .DELETE { background:#fff5f5; color:#c53030; }
+
+    /* ── Form ── */
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+    .form-group label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px; font-size: 0.875rem;
+      outline: none; transition: border-color .15s;
+      background: #fafafa;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--primary); background: white;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 0.82rem; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 9px 18px; border: none; border-radius: 6px;
+      font-size: 0.875rem; font-weight: 600; cursor: pointer;
+      transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary  { background: var(--primary); color: white; }
+    .btn-primary:hover  { background: var(--primary-dark); }
+    .btn-secondary { background: #edf2f7; color: var(--text); }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-danger   { background: var(--error); color: white; }
+    .btn-danger:hover   { background: #c53030; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Response box ── */
+    .response-box {
+      margin-top: 14px;
+      border-radius: 6px;
+      overflow: hidden;
+      display: none;
+    }
+    .response-box.visible { display: block; }
+    .response-header {
+      padding: 8px 14px;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: .04em;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .response-header.success { background: #c6f6d5; color: #276749; }
+    .response-header.error   { background: #fed7d7; color: #c53030; }
+    .response-header.loading { background: #bee3f8; color: #2b6cb0; }
+    .response-body {
+      background: var(--code-bg); color: #e2e8f0;
+      padding: 16px; font-family: 'Courier New', monospace;
+      font-size: 0.78rem; line-height: 1.6; overflow-x: auto;
+      max-height: 400px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* ── Basket items ── */
+    .basket-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .basket-item {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .basket-item input { flex: 1; }
+    .basket-item .pct { width: 90px; flex: none; }
+    .basket-total {
+      font-size: 0.82rem; font-weight: 600; text-align: right;
+      padding: 6px 12px; border-radius: 6px; background: #f7fafc;
+      color: var(--text-muted);
+    }
+    .basket-total.ok  { color: var(--success); background: #f0fff4; }
+    .basket-total.bad { color: var(--error);   background: #fff5f5; }
+
+    /* ── Tabs inside panel ── */
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+    .tab-btn {
+      padding: 8px 16px; background: none; border: none;
+      font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px;
+      transition: all .15s;
+    }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Welcome ── */
+    .welcome-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .stat-card .icon { font-size: 1.6rem; }
+    .stat-card .label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+    .stat-card .value { font-size: 1.1rem; font-weight: 700; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1a202c; color: white;
+      padding: 10px 18px; border-radius: 8px;
+      font-size: 0.85rem; font-weight: 500;
+      opacity: 0; transform: translateY(10px);
+      transition: all .3s; pointer-events: none; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CP</div>
+  <div>
+    <h1>Compras Programadas</h1>
+    <p>Painel de Testes — Itaú</p>
+  </div>
+  <div class="api-badge">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Verificando API...</span>
+    <span style="color:#a0aec0; margin-left:6px;">localhost:5081</span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="section-label">Geral</div>
+    <button class="active" onclick="showPanel('home', this)">🏠 Início</button>
+
+    <div class="section-label">Clientes</div>
+    <button onclick="showPanel('adesao', this)">➕ Adesão</button>
+    <button onclick="showPanel('saida', this)">🚪 Saída</button>
+    <button onclick="showPanel('valor', this)">💰 Alterar Valor</button>
+    <button onclick="showPanel('carteira', this)">📊 Carteira</button>
+    <button onclick="showPanel('rentabilidade', this)">📈 Rentabilidade</button>
+
+    <div class="section-label">Admin</div>
+    <button onclick="showPanel('cesta', this)">🧺 Cestas</button>
+    <button onclick="showPanel('master', this)">🏦 Conta Master</button>
+    <button onclick="showPanel('kafka', this)">📨 Kafka / IR</button>
+    <button onclick="showPanel('reset', this)">🗑️ Reset DB</button>
+
+    <div class="section-label">Motor</div>
+    <button onclick="showPanel('motor', this)">⚙️ Executar Compra</button>
+  </nav>
+
+  <main>
+
+    <!-- HOME -->
+    <div id="panel-home" class="panel active">
+      <div class="panel-title">Bem-vindo ao Painel de Testes</div>
+      <div class="panel-desc">Interface para testar todos os endpoints da API de Compras Programadas.</div>
+      <div class="welcome-grid">
+        <div class="stat-card">
+          <div class="icon">👥</div>
+          <div class="label">Clientes</div>
+          <div class="value">Adesão, Saída, Carteira</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🧺</div>
+          <div class="label">Cestas</div>
+          <div class="value">Criar, Consultar, Histórico</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">⚙️</div>
+          <div class="label">Motor de Compra</div>
+          <div class="value">Execução manual</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">📨</div>
+          <div class="label">Kafka / IR</div>
+          <div class="value">Eventos de Imposto</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🏦</div>
+          <div class="label">Conta Master</div>
+          <div class="value">Custódia consolidada</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">📖</div>
+          <div class="label">Swagger</div>
+          <div class="value"><a href="http://localhost:5081/swagger" target="_blank" style="color:var(--primary)">Abrir docs ↗</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADESÃO -->
+    <div id="panel-adesao" class="panel">
+      <div class="panel-title">Adesão de Cliente</div>
+      <div class="panel-desc">Cadastra um novo cliente no produto de Compras Programadas.</div>
+
+      <div class="card">
+        <h3><span class="method-badge POST">POST</span> /api/clientes/adesao</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nome</label>
+            <input id="ad-nome" type="text" placeholder="João da Silva" />
+          </div>
+          <div class="form-group">
+            <label>CPF</label>
+            <input id="ad-cpf" type="text" placeholder="12345678901" maxlength="11" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>E-mail</label>
+            <input id="ad-email" type="email" placeholder="joao@email.com" />
+          </div>
+          <div class="form-group">
+            <label>Valor Mensal (R$)</label>
+            <input id="ad-valor" type="number" min="100" step="0.01" placeholder="500.00" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-primary" onclick="aderir()">Cadastrar Cliente</button>
+          <button class="btn btn-secondary btn-sm" onclick="fillAdesaoExample()">Preencher exemplo</button>
+        </div>
+        <div id="resp-adesao" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- SAÍDA -->
+    <div id="panel-saida" class="panel">
+      <div class="panel-title">Saída do Produto</div>
+      <div class="panel-desc">Registra a saída de um cliente do produto. A custódia é mantida.</div>
+
+      <div class="card">
+        <h3><span class="method-badge POST">POST</span> /api/clientes/{clienteId}/saida</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ID do Cliente (GUID)</label>
+            <input id="saida-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="sair()">Registrar Saída</button>
+        <div id="resp-saida" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- ALTERAR VALOR -->
+    <div id="panel-valor" class="panel">
+      <div class="panel-title">Alterar Valor Mensal</div>
+      <div class="panel-desc">Altera o valor de aporte mensal de um cliente.</div>
+
+      <div class="card">
+        <h3><span class="method-badge PUT">PUT</span> /api/clientes/{clienteId}/valor-mensal</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ID do Cliente (GUID)</label>
+            <input id="val-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+          </div>
+          <div class="form-group">
+            <label>Novo Valor Mensal (R$)</label>
+            <input id="val-novo" type="number" min="100" step="0.01" placeholder="1000.00" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="alterarValor()">Salvar Alteração</button>
+        <div id="resp-valor" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- CARTEIRA -->
+    <div id="panel-carteira" class="panel">
+      <div class="panel-title">Carteira do Cliente</div>
+      <div class="panel-desc">Exibe a carteira de investimentos com holdings, P&L e composição.</div>
+
+      <div class="card">
+        <h3><span class="method-badge GET">GET</span> /api/clientes/{clienteId}/carteira</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ID do Cliente (GUID)</label>
+            <input id="cart-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="getCarteira()">Consultar Carteira</button>
+        <div id="resp-carteira" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- RENTABILIDADE -->
+    <div id="panel-rentabilidade" class="panel">
+      <div class="panel-title">Rentabilidade do Cliente</div>
+      <div class="panel-desc">Exibe histórico de aportes e evolução da carteira.</div>
+
+      <div class="card">
+        <h3><span class="method-badge GET">GET</span> /api/clientes/{clienteId}/rentabilidade</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ID do Cliente (GUID)</label>
+            <input id="rent-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="getRentabilidade()">Ver Rentabilidade</button>
+        <div id="resp-rentabilidade" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- CESTA -->
+    <div id="panel-cesta" class="panel">
+      <div class="panel-title">Cestas de Recomendação</div>
+      <div class="panel-desc">Cria e consulta cestas de ativos. Exatamente 5 ativos somando 100%.</div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('cesta','criar', this)">Criar Cesta</button>
+        <button class="tab-btn" onclick="switchTab('cesta','atual', this)">Cesta Atual</button>
+        <button class="tab-btn" onclick="switchTab('cesta','historico', this)">Histórico</button>
+        <button class="tab-btn" onclick="switchTab('cesta','rebalancear', this)">Rebalancear</button>
+      </div>
+
+      <div id="cesta-tab-criar" class="tab-panel active">
+        <div class="card">
+          <h3><span class="method-badge POST">POST</span> /api/admin/cesta</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nome da Cesta</label>
+              <input id="cesta-nome" type="text" placeholder="Cesta Tech 2025" />
+            </div>
+          </div>
+          <div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Ativos (5 obrigatórios)</div>
+          <div class="basket-items" id="basket-items">
+            <div class="basket-item" style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:-4px;">
+              <span style="flex:1;">Ticker</span><span class="pct">Percentual (%)</span><span style="width:32px;"></span>
+            </div>
+          </div>
+          <div class="basket-total" id="basket-total">Total: 0%</div>
+          <div style="display:flex;gap:10px;margin-top:14px;align-items:center;">
+            <button class="btn btn-primary" onclick="criarCesta()">Criar Cesta</button>
+            <button class="btn btn-secondary btn-sm" onclick="fillCestaExample()">Preencher exemplo</button>
+          </div>
+          <div id="resp-cesta-criar" class="response-box"></div>
+        </div>
+      </div>
+
+      <div id="cesta-tab-atual" class="tab-panel">
+        <div class="card">
+          <h3><span class="method-badge GET">GET</span> /api/admin/cesta/atual</h3>
+          <button class="btn btn-primary" onclick="getCestaAtual()">Consultar Cesta Atual</button>
+          <div id="resp-cesta-atual" class="response-box"></div>
+        </div>
+      </div>
+
+      <div id="cesta-tab-historico" class="tab-panel">
+        <div class="card">
+          <h3><span class="method-badge GET">GET</span> /api/admin/cesta/historico</h3>
+          <button class="btn btn-primary" onclick="getHistoricoCestas()">Ver Histórico</button>
+          <div id="resp-cesta-historico" class="response-box"></div>
+        </div>
+      </div>
+
+      <div id="cesta-tab-rebalancear" class="tab-panel">
+        <div class="card">
+          <h3><span class="method-badge POST">POST</span> /api/admin/rebalanceamento/desvio</h3>
+          <div class="form-row">
+            <div class="form-group" style="max-width:200px;">
+              <label>Limiar de Desvio (%)</label>
+              <input id="rebal-limiar" type="number" min="0" step="0.1" value="5" placeholder="5" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="rebalancear()">Executar Rebalanceamento</button>
+          <div id="resp-rebalancear" class="response-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MASTER -->
+    <div id="panel-master" class="panel">
+      <div class="panel-title">Conta Master — Custódia</div>
+      <div class="panel-desc">Visualiza a custódia consolidada da conta MASTER do broker.</div>
+
+      <div class="card">
+        <h3><span class="method-badge GET">GET</span> /api/admin/conta-master/custodia</h3>
+        <button class="btn btn-primary" onclick="getMaster()">Consultar Conta Master</button>
+        <div id="resp-master" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- KAFKA -->
+    <div id="panel-kafka" class="panel">
+      <div class="panel-title">Kafka — Eventos de IR</div>
+      <div class="panel-desc">Lista mensagens do tópico Kafka de eventos de Imposto de Renda.</div>
+
+      <div class="card">
+        <h3><span class="method-badge GET">GET</span> /api/admin/kafka/mensagens</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tópico</label>
+            <input id="kafka-topico" type="text" value="ir-eventos" />
+          </div>
+          <div class="form-group" style="max-width:180px;">
+            <label>Timeout (ms)</label>
+            <input id="kafka-timeout" type="number" value="2000" step="500" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="getKafka()">Listar Mensagens</button>
+        <div id="resp-kafka" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- RESET -->
+    <div id="panel-reset" class="panel">
+      <div class="panel-title">Reset do Banco de Dados</div>
+      <div class="panel-desc">Apaga todos os dados de todas as tabelas. <strong>Use apenas em ambiente de desenvolvimento!</strong></div>
+
+      <div class="card" style="border-color:#feb2b2;">
+        <h3><span class="method-badge DELETE">DELETE</span> /api/admin/reset-database</h3>
+        <p style="font-size:0.85rem;color:var(--error);margin-bottom:16px;">
+          ⚠️ Esta operação é <strong>irreversível</strong>. Todos os clientes, cestas, custódias e histórico serão apagados.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem;cursor:pointer;">
+            <input type="checkbox" id="confirm-reset" onchange="document.getElementById('btn-reset').disabled=!this.checked" />
+            Confirmo que quero apagar todos os dados
+          </label>
+        </div>
+        <button id="btn-reset" class="btn btn-danger" style="margin-top:12px;" disabled onclick="resetDB()">
+          Resetar Banco de Dados
+        </button>
+        <div id="resp-reset" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- MOTOR -->
+    <div id="panel-motor" class="panel">
+      <div class="panel-title">Motor de Compra</div>
+      <div class="panel-desc">Dispara manualmente o ciclo de compra programada. Processa todos os clientes ativos.</div>
+
+      <div class="card">
+        <h3><span class="method-badge POST">POST</span> /api/motor/executar-compra</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data de Referência (opcional)</label>
+            <input id="motor-data" type="date" />
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">
+          Se não informada, usa a data atual. O motor busca cotações, calcula parcelas e distribui para cada cliente ativo.
+        </p>
+        <button class="btn btn-primary" onclick="executarCompra()">▶ Executar Motor de Compra</button>
+        <div id="resp-motor" class="response-box"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const BASE = 'http://localhost:5081';
+
+  // ── Status check ──
+  async function checkStatus() {
+    try {
+      const r = await fetch(`${BASE}/swagger/index.html`, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if (r.ok) { dot.className = 'status-dot online'; txt.textContent = 'API Online'; }
+      else       { dot.className = 'status-dot'; txt.textContent = 'API Indisponível'; }
+    } catch {
+      document.getElementById('statusDot').className = 'status-dot';
+      document.getElementById('statusText').textContent = 'API Indisponível';
+    }
+  }
+  checkStatus();
+  setInterval(checkStatus, 15000);
+
+  // ── Nav ──
+  function showPanel(name, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── Tabs ──
+  function switchTab(panel, tab, btn) {
+    document.querySelectorAll(`#panel-${panel} .tab-panel`).forEach(p => p.classList.remove('active'));
+    document.querySelectorAll(`#panel-${panel} .tab-btn`).forEach(b => b.classList.remove('active'));
+    document.getElementById(`${panel}-tab-${tab}`).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── Toast ──
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Response renderer ──
+  function showResponse(id, status, data) {
+    const box = document.getElementById(id);
+    box.className = 'response-box visible';
+    const ok = status >= 200 && status < 300;
+    const cls = status === 0 ? 'loading' : ok ? 'success' : 'error';
+    const label = status === 0 ? 'CARREGANDO...' : `HTTP ${status} — ${ok ? 'SUCESSO' : 'ERRO'}`;
+    const copyBtn = status !== 0 ? `<button class="btn btn-secondary btn-sm" onclick="copyToClipboard('${id}-body')">Copiar</button>` : '';
+    box.innerHTML = `
+      <div class="response-header ${cls}">
+        <span>${label}</span>${copyBtn}
+      </div>
+      <div class="response-body" id="${id}-body">${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}</div>
+    `;
+  }
+
+  function copyToClipboard(id) {
+    const text = document.getElementById(id)?.textContent || '';
+    navigator.clipboard.writeText(text).then(() => toast('Copiado!'));
+  }
+
+  // ── Generic API call ──
+  async function call(method, path, body, respId) {
+    showResponse(respId, 0, 'Aguardando resposta...');
+    try {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+      };
+      if (body !== undefined) opts.body = JSON.stringify(body);
+      const r = await fetch(BASE + path, opts);
+      let data;
+      const ct = r.headers.get('content-type') || '';
+      try { data = ct.includes('json') ? await r.json() : await r.text(); }
+      catch { data = await r.text(); }
+      showResponse(respId, r.status, data);
+    } catch (e) {
+      showResponse(respId, 503, `Erro de conexão: ${e.message}\n\nVerifique se a API está rodando em ${BASE}`);
+    }
+  }
+
+  // ── CLIENTES ──
+
+  function fillAdesaoExample() {
+    const n = Math.floor(Math.random() * 900) + 100;
+    document.getElementById('ad-nome').value  = `Cliente Teste ${n}`;
+    document.getElementById('ad-cpf').value   = String(Math.floor(Math.random() * 90000000000) + 10000000000);
+    document.getElementById('ad-email').value = `cliente${n}@teste.com`;
+    document.getElementById('ad-valor').value = (Math.floor(Math.random() * 19) + 2) * 100;
+  }
+
+  async function aderir() {
+    const nome  = document.getElementById('ad-nome').value.trim();
+    const cpf   = document.getElementById('ad-cpf').value.trim();
+    const email = document.getElementById('ad-email').value.trim();
+    const valor = parseFloat(document.getElementById('ad-valor').value);
+    if (!nome || !cpf || !email || isNaN(valor)) { toast('Preencha todos os campos'); return; }
+    await call('POST', '/api/clientes/adesao', { nome, cpf, email, valorMensal: valor }, 'resp-adesao');
+  }
+
+  async function sair() {
+    const id = document.getElementById('saida-id').value.trim();
+    if (!id) { toast('Informe o ID do cliente'); return; }
+    await call('POST', `/api/clientes/${id}/saida`, undefined, 'resp-saida');
+  }
+
+  async function alterarValor() {
+    const id  = document.getElementById('val-id').value.trim();
+    const val = parseFloat(document.getElementById('val-novo').value);
+    if (!id || isNaN(val)) { toast('Preencha todos os campos'); return; }
+    await call('PUT', `/api/clientes/${id}/valor-mensal`, { novoValorMensal: val }, 'resp-valor');
+  }
+
+  async function getCarteira() {
+    const id = document.getElementById('cart-id').value.trim();
+    if (!id) { toast('Informe o ID do cliente'); return; }
+    await call('GET', `/api/clientes/${id}/carteira`, undefined, 'resp-carteira');
+  }
+
+  async function getRentabilidade() {
+    const id = document.getElementById('rent-id').value.trim();
+    if (!id) { toast('Informe o ID do cliente'); return; }
+    await call('GET', `/api/clientes/${id}/rentabilidade`, undefined, 'resp-rentabilidade');
+  }
+
+  // ── CESTA ──
+
+  function buildBasketItems() {
+    const container = document.getElementById('basket-items');
+    // Clear except header
+    const header = container.children[0];
+    container.innerHTML = '';
+    container.appendChild(header);
+    for (let i = 0; i < 5; i++) {
+      const div = document.createElement('div');
+      div.className = 'basket-item';
+      div.innerHTML = `
+        <input type="text" id="ticker-${i}" placeholder="ex: PETR4" style="text-transform:uppercase;" oninput="updateBasketTotal()" />
+        <input type="number" id="pct-${i}" class="pct" placeholder="%" min="0" max="100" step="0.01" oninput="updateBasketTotal()" />
+        <button class="btn btn-secondary btn-sm" style="width:32px;padding:6px;" title="Limpar" onclick="clearBasketRow(${i})">✕</button>
+      `;
+      container.appendChild(div);
+    }
+    updateBasketTotal();
+  }
+
+  function clearBasketRow(i) {
+    document.getElementById(`ticker-${i}`).value = '';
+    document.getElementById(`pct-${i}`).value = '';
+    updateBasketTotal();
+  }
+
+  function updateBasketTotal() {
+    let total = 0;
+    for (let i = 0; i < 5; i++) {
+      const v = parseFloat(document.getElementById(`pct-${i}`)?.value) || 0;
+      total += v;
+    }
+    const el = document.getElementById('basket-total');
+    el.textContent = `Total: ${total.toFixed(2)}%`;
+    el.className = 'basket-total' + (Math.abs(total - 100) < 0.01 ? ' ok' : total > 0 ? ' bad' : '');
+  }
+
+  function fillCestaExample() {
+    document.getElementById('cesta-nome').value = 'Cesta Blue Chips';
+    const examples = [
+      ['PETR4', 25], ['VALE3', 25], ['ITUB4', 20], ['BBDC4', 15], ['ABEV3', 15]
+    ];
+    examples.forEach(([t, p], i) => {
+      document.getElementById(`ticker-${i}`).value = t;
+      document.getElementById(`pct-${i}`).value = p;
+    });
+    updateBasketTotal();
+  }
+
+  async function criarCesta() {
+    const nome = document.getElementById('cesta-nome').value.trim();
+    if (!nome) { toast('Informe o nome da cesta'); return; }
+    const itens = [];
+    for (let i = 0; i < 5; i++) {
+      const ticker = (document.getElementById(`ticker-${i}`)?.value || '').trim().toUpperCase();
+      const pct    = parseFloat(document.getElementById(`pct-${i}`)?.value);
+      if (!ticker || isNaN(pct)) { toast(`Preencha o ativo ${i + 1} completamente`); return; }
+      itens.push({ ticker, percentual: pct });
+    }
+    const total = itens.reduce((s, x) => s + x.percentual, 0);
+    if (Math.abs(total - 100) > 0.01) { toast(`Total deve ser 100%. Atual: ${total.toFixed(2)}%`); return; }
+    await call('POST', '/api/admin/cesta', { nome, itens }, 'resp-cesta-criar');
+  }
+
+  async function getCestaAtual() {
+    await call('GET', '/api/admin/cesta/atual', undefined, 'resp-cesta-atual');
+  }
+
+  async function getHistoricoCestas() {
+    await call('GET', '/api/admin/cesta/historico', undefined, 'resp-cesta-historico');
+  }
+
+  async function rebalancear() {
+    const limiar = parseFloat(document.getElementById('rebal-limiar').value);
+    if (isNaN(limiar)) { toast('Informe o limiar'); return; }
+    await call('POST', `/api/admin/rebalanceamento/desvio?limiar=${limiar}`, undefined, 'resp-rebalancear');
+  }
+
+  // ── MASTER ──
+  async function getMaster() {
+    await call('GET', '/api/admin/conta-master/custodia', undefined, 'resp-master');
+  }
+
+  // ── KAFKA ──
+  async function getKafka() {
+    const topico  = document.getElementById('kafka-topico').value.trim() || 'ir-eventos';
+    const timeout = parseInt(document.getElementById('kafka-timeout').value) || 2000;
+    await call('GET', `/api/admin/kafka/mensagens?topico=${topico}&timeoutMs=${timeout}`, undefined, 'resp-kafka');
+  }
+
+  // ── RESET ──
+  async function resetDB() {
+    document.getElementById('confirm-reset').checked = false;
+    document.getElementById('btn-reset').disabled = true;
+    await call('DELETE', '/api/admin/reset-database', undefined, 'resp-reset');
+  }
+
+  // ── MOTOR ──
+  async function executarCompra() {
+    const dataVal = document.getElementById('motor-data').value;
+    const body = dataVal ? { dataReferencia: dataVal } : {};
+    await call('POST', '/api/motor/executar-compra', body, 'resp-motor');
+  }
+
+  // ── Init basket items ──
+  buildBasketItems();
+</script>
+</body>
+</html>
