@@ -29,6 +29,7 @@ public class MotorCompraDateTests
             Mock.Of<ICotacaoRepository>(),
             Mock.Of<ICotahistService>(),
             Mock.Of<IKafkaProducer>(),
+            Mock.Of<IHistoricoOrdemClienteRepository>(),
             config,
             Mock.Of<ILogger<MotorCompraService>>());
     }

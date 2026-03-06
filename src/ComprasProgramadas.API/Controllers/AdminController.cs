@@ -150,4 +150,70 @@ public class AdminController : ControllerBase
         var result = await _mediator.Send(new GetCustodiaMasterQuery(), ct);
         return Ok(result);
     }
+
+    /// <summary>[DEV] Listar todos os registros de uma tabela para inspeção</summary>
+    [HttpGet("tabelas/{tabela}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTabela(string tabela, CancellationToken ct)
+    {
+        object? data = tabela.ToLowerInvariant() switch
+        {
+            "clientes" => await _context.Clientes.AsNoTracking()
+                .Select(x => new { x.Id, x.Nome, x.CPF, x.Email, x.ValorMensal, x.Ativo, x.DataAdesao, x.DataSaida })
+                .ToListAsync(ct),
+
+            "contasgraficas" => await _context.ContasGraficas.AsNoTracking()
+                .Select(x => new { x.Id, x.ClienteId, x.NumeroConta, Tipo = x.Tipo.ToString(), x.DataCriacao })
+                .ToListAsync(ct),
+
+            "custodias" => await _context.Custodias.AsNoTracking()
+                .Select(x => new { x.Id, x.ContaGraficaId, x.Ticker, x.Quantidade, x.PrecoMedio, x.DataUltimaAtualizacao })
+                .ToListAsync(ct),
+
+            "cestasrecomendacao" => await _context.CestasRecomendacao.AsNoTracking()
+                .Select(x => new { x.Id, x.Nome, x.Ativa, x.DataCriacao, x.DataDesativacao })
+                .ToListAsync(ct),
+
+            "itenscesta" => await _context.ItensCesta.AsNoTracking()
+                .Select(x => new { x.Id, x.CestaId, x.Ticker, x.Percentual })
+                .ToListAsync(ct),
+
+            "ordenscompra" => await _context.OrdensCompra.AsNoTracking()
+                .Select(x => new { x.Id, x.ContaMasterId, x.Ticker, x.Quantidade, x.PrecoUnitario, TipoMercado = x.TipoMercado.ToString(), x.DataExecucao })
+                .ToListAsync(ct),
+
+            "distribuicoes" => await _context.Distribuicoes.AsNoTracking()
+                .Select(x => new { x.Id, x.OrdemCompraId, x.CustodiaFilhoteId, x.Ticker, x.Quantidade, x.PrecoUnitario, x.DataDistribuicao })
+                .ToListAsync(ct),
+
+            "eventosir" => await _context.EventosIR.AsNoTracking()
+                .Select(x => new { x.Id, x.ClienteId, Tipo = x.Tipo.ToString(), x.ValorBase, x.ValorIR, x.PublicadoKafka, x.DataEvento })
+                .ToListAsync(ct),
+
+            "cotacoes" => await _context.Cotacoes.AsNoTracking()
+                .Select(x => new { x.Id, x.DataPregao, x.Ticker, x.PrecoAbertura, x.PrecoFechamento, x.PrecoMaximo, x.PrecoMinimo })
+                .OrderByDescending(x => x.DataPregao)
+                .ToListAsync(ct),
+
+            "rebalanceamentos" => await _context.Rebalanceamentos.AsNoTracking()
+                .Select(x => new { x.Id, x.ClienteId, Tipo = x.Tipo.ToString(), x.TickerVendido, x.TickerComprado, x.ValorVenda, x.DataRebalanceamento })
+                .ToListAsync(ct),
+
+            "historicoaportes" => await _context.HistoricoAportes.AsNoTracking()
+                .Select(x => new { x.Id, x.ClienteId, x.ValorAnterior, x.ValorNovo, x.DataAlteracao })
+                .ToListAsync(ct),
+
+            "historicoordenscliente" => await _context.HistoricoOrdensCliente.AsNoTracking()
+                .Select(x => new { x.Id, x.ClienteId, x.Ticker, TipoOrdem = x.TipoOrdem.ToString(), x.Quantidade, x.PrecoUnitario, x.ValorTotal, Origem = x.Origem.ToString(), x.DataOperacao })
+                .ToListAsync(ct),
+
+            _ => null
+        };
+
+        if (data is null)
+            return NotFound(new { erro = $"Tabela '{tabela}' não encontrada.", disponiveis = new[] { "clientes", "contasgraficas", "custodias", "cestasrecomendacao", "itenscesta", "ordenscompra", "distribuicoes", "eventosir", "cotacoes", "rebalanceamentos", "historicoaportes", "historicoordenscliente" } });
+
+        return Ok(data);
+    }
 }
