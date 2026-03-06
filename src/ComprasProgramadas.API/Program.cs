@@ -3,9 +3,29 @@ using ComprasProgramadas.API.Middleware;
 using ComprasProgramadas.Application;
 using ComprasProgramadas.Infrastructure;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Events;
 using System.Reflection;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} {Message:lj}{NewLine}{Exception}")
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, config) => config
+    .ReadFrom.Configuration(ctx.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext:l} {Message:lj}{NewLine}{Exception}"));
 
 // Identificar a pasta cotacoes
 var rawCotacoesPath = builder.Configuration["CotacoesPath"] ?? "cotacoes";
@@ -52,6 +72,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Middleware
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0}ms)";
+});
 app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseSwagger();
