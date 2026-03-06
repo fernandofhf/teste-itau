@@ -1,4 +1,4 @@
-using ComprasProgramadas.Application.Services;
+using ComprasProgramadas.Application.Services.Interfaces;
 using ComprasProgramadas.Domain.Interfaces;
 using ComprasProgramadas.Infrastructure.Cotacoes;
 using ComprasProgramadas.Infrastructure.Messaging;
