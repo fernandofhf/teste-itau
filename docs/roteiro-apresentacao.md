@@ -436,7 +436,7 @@ Mostrar brevemente os arquivos de teste:
 - `ClienteCommandsTests`: adesão, saída, alteração de valor mensal
 - `QueryHandlerTests`: carteira, rentabilidade, custódia master
 
-> **Explicar:** Testes de integração usam SQLite in-memory (sem MySQL real), o que permite rodar sem Docker.
+> **Explicar:** Testes de integração usam EF Core InMemory (sem MySQL real), o que permite rodar sem Docker — inclusive no CI/CD do GitHub Actions.
 
 ---
 
@@ -447,7 +447,8 @@ Mostrar brevemente os arquivos de teste:
 | Frontend web (HTML/JS puro) para testar todos os endpoints | ✅ |
 | CQRS com MediatR + Clean Architecture | ✅ |
 | DDD (entidades com comportamento, sem setters públicos) | ✅ |
-| Logs estruturados com Serilog | ✅ |
+| Observabilidade: logs estruturados com Serilog (JSON em produção, texto no dev) | ✅ |
+| CI/CD: GitHub Actions (build + unit tests + integration tests no push/PR) | ✅ |
 | Rebalanceamento por desvio de proporção (RN-050/051/052) | ✅ |
 | Histórico de ordens por cliente para auditoria | ✅ |
 | Histórico de alterações do valor mensal | ✅ |

@@ -47,6 +47,8 @@ Sistema backend que automatiza a compra programada de ações para clientes de u
 - **ORM** via EF Core 9 com Pomelo (MySQL), migrations code-first
 - **Mensageria** via Apache Kafka para eventos de IR (dedo-duro e venda)
 - **Background Service** para agendamento diário do motor de compra
+- **Observabilidade** via Serilog: logs estruturados em JSON (produção) ou texto legível (dev), enriquecidos com Application/Environment/Request
+- **CI/CD** via GitHub Actions: build + testes unitários + testes de integração em todo push/PR
 
 ### Fluxo do Motor de Compra
 
@@ -79,10 +81,12 @@ Dia 5/15/25 (ou próximo dia útil)
 | EF Core + Pomelo (MySQL) | 9.0.5 |
 | MediatR | 12.4.1 |
 | FluentValidation | 11.11.0 |
+| Serilog (logs estruturados + JSON em produção) | 10.0.0 |
 | Confluent.Kafka | 2.6.0 |
 | xUnit + Moq + FluentAssertions | — |
 | MySQL | 8.0 (Docker) |
 | Apache Kafka | 3.x (Docker) |
+| GitHub Actions (CI/CD) | — |
 
 ---
 
@@ -153,26 +157,31 @@ Swagger UI disponível em: `https://localhost:{porta}/swagger`
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST` | `/api/clientes/aderir` | Adesão ao produto |
-| `POST` | `/api/clientes/{id}/sair` | Saída do produto |
+| `POST` | `/api/clientes/adesao` | Adesão ao produto |
+| `POST` | `/api/clientes/{id}/saida` | Saída do produto (soft delete, custódia mantida) |
 | `PUT` | `/api/clientes/{id}/valor-mensal` | Alterar valor mensal (mín. R$ 100) |
-| `GET` | `/api/clientes/{id}/carteira` | Carteira atual do cliente |
+| `GET` | `/api/clientes/{id}/carteira` | Carteira atual com P/L e composição % |
 | `GET` | `/api/clientes/{id}/rentabilidade` | Rentabilidade e histórico de aportes |
+| `GET` | `/api/clientes/{id}/ordens` | Histórico de ordens (compras e vendas) |
+| `GET` | `/api/clientes/{id}/historico-aportes` | Histórico de alterações do valor mensal |
 
-### Administração (Cesta)
+### Administração
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST` | `/api/admin/cestas` | Criar nova cesta (5 ativos, soma=100%) |
-| `GET` | `/api/admin/cestas/atual` | Cesta ativa atual |
-| `GET` | `/api/admin/cestas/historico` | Histórico de todas as cestas |
-| `GET` | `/api/admin/custodia-master` | Custódia consolidada da conta MASTER |
+| `POST` | `/api/admin/cesta` | Criar nova cesta (5 ativos, soma=100%) |
+| `GET` | `/api/admin/cesta/atual` | Cesta ativa atual |
+| `GET` | `/api/admin/cesta/historico` | Histórico de todas as cestas |
+| `GET` | `/api/admin/conta-master/custodia` | Custódia consolidada da conta MASTER |
+| `POST` | `/api/admin/rebalanceamento/desvio?limiar={pp}` | Rebalanceamento por desvio de proporção |
+| `DELETE` | `/api/admin/reset-database` | Zerar base (dev/demo) |
+| `GET` | `/api/admin/tabelas/{tabela}` | Inspecionar qualquer das 12 tabelas (dev) |
 
 ### Motor de Compra
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST` | `/api/motor/executar` | Executar compra (body opcional: `{"dataReferencia":"2026-03-05"}`) |
+| `POST` | `/api/motor/executar-compra` | Executar compra para uma data (`{"dataReferencia":"2026-03-05"}`) |
 
 ---
 
@@ -181,7 +190,7 @@ Swagger UI disponível em: `https://localhost:{porta}/swagger`
 ### Aderir ao produto
 
 ```bash
-curl -X POST http://localhost:5000/api/clientes/aderir \
+curl -X POST http://localhost:5000/api/clientes/adesao \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "João Silva",
@@ -194,7 +203,7 @@ curl -X POST http://localhost:5000/api/clientes/aderir \
 ### Criar cesta de recomendação
 
 ```bash
-curl -X POST http://localhost:5000/api/admin/cestas \
+curl -X POST http://localhost:5000/api/admin/cesta \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "Top 5 Março 2026",
@@ -211,7 +220,7 @@ curl -X POST http://localhost:5000/api/admin/cestas \
 ### Executar motor de compra
 
 ```bash
-curl -X POST http://localhost:5000/api/motor/executar \
+curl -X POST http://localhost:5000/api/motor/executar-compra \
   -H "Content-Type: application/json" \
   -d '{"dataReferencia": "2026-03-05"}'
 ```
@@ -334,6 +343,20 @@ teste-itau/
 | **RN-030** | Disparado automaticamente ao criar nova cesta ativa |
 | **RN-031** | Vende ativos removidos da cesta; usa o valor para comprar os novos |
 | **RN-032** | Ajusta percentuais dos ativos mantidos se estiverem acima do alvo |
+
+---
+
+## Diferenciais Implementados
+
+| Item | Detalhe |
+|---|---|
+| **Frontend web** | Interface HTML/JS puro em `frontend/index.html` — testa todos os endpoints e inspeciona as 12 tabelas do banco |
+| **CQRS + Clean Architecture** | MediatR 12 com Commands/Queries separados, 4 camadas isoladas |
+| **DDD** | Entidades com comportamento (`cliente.Sair()`, `custodia.AdicionarAtivos()`), sem setters públicos |
+| **Observabilidade** | Serilog: JSON estruturado em produção (`CompactJsonFormatter`), texto legível no dev, enriquecido com Application/Environment |
+| **CI/CD** | GitHub Actions em `.github/workflows/ci.yml` — build + unit tests + integration tests em todo push/PR |
+| **Rebalanceamento por desvio** | `POST /api/admin/rebalanceamento/desvio?limiar={pp}` detecta e corrige distorções de alocação (RN-050/051/052) |
+| **Histórico de ordens** | Toda compra e venda rastreada por cliente com origem (MotorCompra / RebalanceamentoCesta / RebalanceamentoDesvio) |
 
 ---
 
