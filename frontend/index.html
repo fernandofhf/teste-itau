@@ -695,7 +695,7 @@
   // ── Status check ──
   async function checkStatus() {
     try {
-      const r = await fetch(`${BASE}/swagger/index.html`, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+      const r = await fetch(`${BASE}/swagger/index.html`, { method: 'GET', signal: AbortSignal.timeout(3000) });
       const dot = document.getElementById('statusDot');
       const txt = document.getElementById('statusText');
       if (r.ok) { dot.className = 'status-dot online'; txt.textContent = 'API Online'; }
