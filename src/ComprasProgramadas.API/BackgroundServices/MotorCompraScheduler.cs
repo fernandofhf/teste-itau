@@ -1,9 +1,12 @@
 using ComprasProgramadas.Application.Services.Interfaces;
+using Cronos;
 
 namespace ComprasProgramadas.API.BackgroundServices;
 
 public class MotorCompraScheduler : BackgroundService
 {
+    private static readonly CronExpression _cron = CronExpression.Parse("0 10 * * 1-5");
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MotorCompraScheduler> _logger;
 
@@ -19,10 +22,24 @@ public class MotorCompraScheduler : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var agora = DateTime.UtcNow;
+            var proxima = _cron.GetNextOccurrence(agora, TimeZoneInfo.Utc);
+
+            if (proxima is null) break;
+
+            var delay = proxima.Value - agora;
+            _logger.LogInformation("Próxima verificação agendada para {Proxima} UTC (em {Minutos:F0} min)",
+                proxima.Value, delay.TotalMinutes);
+
             try
             {
-                var agora = DateTime.UtcNow;
-                var hoje = DateOnly.FromDateTime(agora);
+                await Task.Delay(delay, stoppingToken);
+            }
+            catch (OperationCanceledException) { break; }
+
+            try
+            {
+                var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
 
                 using var scope = _scopeFactory.CreateScope();
                 var motorService = scope.ServiceProvider.GetRequiredService<IMotorCompraService>();
@@ -34,21 +51,11 @@ public class MotorCompraScheduler : BackgroundService
                     _logger.LogInformation("Motor executado. Clientes: {N}, Total: R$ {V}",
                         resultado.TotalClientes, resultado.TotalConsolidado);
                 }
-
-                var proximaExecucao = new DateTime(agora.Year, agora.Month, agora.Day, 10, 0, 0, DateTimeKind.Utc)
-                    .AddDays(1);
-                var delay = proximaExecucao - agora;
-
-                if (delay.TotalMinutes > 1)
-                    await Task.Delay(delay, stoppingToken);
-                else
-                    await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro no Motor Scheduler");
-                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
     }
